@@ -11,9 +11,67 @@ npx cap sync
 
 ## API
 
-<docgen-index></docgen-index>
+<docgen-index>
+
+* [`startService()`](#startservice)
+* [`stopService()`](#stopservice)
+* [`addListener('locationUpdate', ...)`](#addlistenerlocationupdate-)
+* [Interfaces](#interfaces)
+
+</docgen-index>
 
 <docgen-api>
-<!-- run docgen to generate docs from the source -->
-<!-- More info: https://github.com/ionic-team/capacitor-docgen -->
+<!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
+
+### startService()
+
+```typescript
+startService() => Promise<void>
+```
+
+--------------------
+
+
+### stopService()
+
+```typescript
+stopService() => Promise<void>
+```
+
+--------------------
+
+
+### addListener('locationUpdate', ...)
+
+```typescript
+addListener(eventName: 'locationUpdate', listenerFunc: (location: ForegroundLocation) => void) => Promise<PluginListenerHandle> & PluginListenerHandle
+```
+
+| Param              | Type                                                                                     |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| **`eventName`**    | <code>'locationUpdate'</code>                                                            |
+| **`listenerFunc`** | <code>(location: <a href="#foregroundlocation">ForegroundLocation</a>) =&gt; void</code> |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt; & <a href="#pluginlistenerhandle">PluginListenerHandle</a></code>
+
+--------------------
+
+
+### Interfaces
+
+
+#### PluginListenerHandle
+
+| Prop         | Type                                      |
+| ------------ | ----------------------------------------- |
+| **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
+
+
+#### ForegroundLocation
+
+| Prop      | Type                |
+| --------- | ------------------- |
+| **`lat`** | <code>number</code> |
+| **`lng`** | <code>number</code> |
+
 </docgen-api>
