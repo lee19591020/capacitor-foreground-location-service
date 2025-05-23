@@ -13,6 +13,7 @@ npx cap sync
 
 <docgen-index>
 
+* [`requestPermission()`](#requestpermission)
 * [`startService()`](#startservice)
 * [`stopService()`](#stopservice)
 * [`addListener('locationUpdate', ...)`](#addlistenerlocationupdate-)
@@ -22,6 +23,17 @@ npx cap sync
 
 <docgen-api>
 <!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
+
+### requestPermission()
+
+```typescript
+requestPermission() => Promise<boolean>
+```
+
+**Returns:** <code>Promise&lt;boolean&gt;</code>
+
+--------------------
+
 
 ### startService()
 

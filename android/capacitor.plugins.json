@@ -1,0 +1,5 @@
+{
+  "name": "CapacitorForegroundLocationService",
+  "className": "CapacitorForegroundLocationServicePlugin",
+  "package": "com.fusion5.capacitorforegroundlocationservice"
+}
