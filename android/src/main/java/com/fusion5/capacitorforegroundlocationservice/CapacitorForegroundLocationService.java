@@ -1,5 +1,6 @@
 package com.fusion5.capacitorforegroundlocationservice;
 
+import android.content.Context;
 import android.util.Log;
 
 import android.Manifest;
@@ -37,23 +38,7 @@ public class CapacitorForegroundLocationService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-
-        locationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(@NonNull LocationResult locationResult) {
-                for (Location location : locationResult.getLocations()) {
-                    CapacitorForegroundLocationServicePlugin plugin = CapacitorForegroundLocationServicePlugin.getInstance();
-                    if (plugin != null) {
-                        plugin.broadcastLocation(location);
-                    }
-                    Log.d("ForegroundLocationService", "Location: " + location.getLatitude() + ", " + location.getLongitude());
-                }
-            }
-        };
-
-        startLocationUpdates();
+        createNotificationChannel(this);
     }
 
     private void startLocationUpdates() {
@@ -76,15 +61,25 @@ public class CapacitorForegroundLocationService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        createNotificationChannel();
 
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Location Service")
-                .setContentText("Tracking location in background")
-                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-                .build();
+        Notification notification = getForegroundNotification(this);
+        startForeground(235, notification);
 
-        startForeground(1, notification);
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                for (Location location : locationResult.getLocations()) {
+                    CapacitorForegroundLocationServicePlugin plugin = CapacitorForegroundLocationServicePlugin.getInstance();
+                    if (plugin != null) {
+                        plugin.broadcastLocation(location);
+                    }
+                    Log.d("LOCATION", "Location: " + location.getLatitude() + ", " + location.getLongitude());
+                }
+            }
+        };
+        startLocationUpdates();
 
         return START_STICKY;
     }
@@ -95,20 +90,33 @@ public class CapacitorForegroundLocationService extends Service {
         fusedLocationClient.removeLocationUpdates(locationCallback);
     }
 
-    private void createNotificationChannel() {
+    private void createNotificationChannel(Context context) {
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            String channelId = "capacitor_foreground_location_service";
+            String channelName = "Foreground Service Channel";
             NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "Foreground Location Service Channel",
-                    NotificationManager.IMPORTANCE_DEFAULT
+                    channelId,
+                    channelName,
+                    NotificationManager.IMPORTANCE_HIGH
             );
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
+            NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            manager.createNotificationChannel(channel);
+            Log.e("WHICH", "WHICH: SUD");
+        } else {
+            Log.e("WHICH", "WHICH: WALA");
         }
     }
+    public Notification getForegroundNotification(Context context) {
+        String channelId = "capacitor_foreground_location_service";
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
+                .setContentTitle("Location Tracking")
+                .setContentText("Running in background")
+                .setSmallIcon(android.R.drawable.ic_menu_mylocation) // Use your app icon
+                .setPriority(NotificationCompat.PRIORITY_HIGH);
 
+        return builder.build();
+    }
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {

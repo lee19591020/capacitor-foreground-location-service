@@ -5,8 +5,12 @@ export interface ForegroundLocation {
   lng: number;
 }
 
+export interface PermissionResponse {
+  granted: boolean
+}
+
 export interface CapacitorForegroundLocationServicePlugin {
-  requestPermission(): Promise<boolean>;
+  requestPermission(): Promise<PermissionResponse>;
   startService(): Promise<void>;
   stopService(): Promise<void>;
   addListener(

@@ -27,10 +27,10 @@ npx cap sync
 ### requestPermission()
 
 ```typescript
-requestPermission() => Promise<boolean>
+requestPermission() => Promise<PermissionResponse>
 ```
 
-**Returns:** <code>Promise&lt;boolean&gt;</code>
+**Returns:** <code>Promise&lt;<a href="#permissionresponse">PermissionResponse</a>&gt;</code>
 
 --------------------
 
@@ -70,6 +70,13 @@ addListener(eventName: 'locationUpdate', listenerFunc: (location: ForegroundLoca
 
 
 ### Interfaces
+
+
+#### PermissionResponse
+
+| Prop          | Type                 |
+| ------------- | -------------------- |
+| **`granted`** | <code>boolean</code> |
 
 
 #### PluginListenerHandle
