@@ -43,36 +43,41 @@ import com.getcapacitor.annotation.PermissionCallback;
 )
 public class CapacitorForegroundLocationServicePlugin extends Plugin {
 
+    int interval;
+    int distanceFilter;
+    String notificationTitle;
+    String notificationText;
+
+    @PluginMethod
+    public void config(PluginCall call){
+        try {
+            int interval = call.getInt("interval", 5000); // default 5 seconds
+            int distanceFilter = call.getInt("distanceFilter", 20); // default 20 meters
+            String notificationTitle = call.getString("notificationTitle");
+            if (notificationTitle == null) {
+                notificationTitle = "Foreground Location Service";
+            }
+            String notificationText = call.getString("notificationMessage");
+            if (notificationText == null) {
+                notificationText = "Tracking location in foreground...";
+            }
+
+            // Save to class fields for later use
+            this.interval = interval;
+            this.distanceFilter = distanceFilter;
+            this.notificationTitle = notificationTitle;
+            this.notificationText = notificationText;
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Wrong configuration");
+        }
+
+    }
+
     private PluginCall savedCall;
     @PluginMethod
     public void requestPermission(PluginCall call) {
-        Log.e("PERMISSION","REquest Permission First");
         savedCall = call;
-
-        /*if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // greater than android 10
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // should greater than 34
-                if (hasAllPermissions()) {
-                    JSObject result = new JSObject();
-                    result.put("granted", true);
-                    Log.e("PERMISSION","granted should be true");
-                    call.resolve(result);
-                } else {
-                    Log.e("PERMISSION","grequest Again?");
-                    requestAllPermissions();
-                }
-            } else {
-                // this is for android 12 which is working fine
-                if(hasAllPermissionsbelowCake()){
-                    JSObject result = new JSObject();
-                    result.put("granted", true);
-                    Log.e("PERMISSION","granted should be true");
-                    call.resolve(result);
-                } else {
-                    requestAllPermissions();
-                }
-            }
-        }*/
-
         if (Build.VERSION.SDK_INT >= 34) {
             // Android 14+ — request all three: location, foreground service, foreground service location
             bridge.getActivity().runOnUiThread(() -> {
@@ -90,6 +95,10 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
     public void startService(PluginCall call) {
         Context context = getContext();
         Intent serviceIntent = new Intent(context, CapacitorForegroundLocationService.class);
+        serviceIntent.putExtra("interval", interval);
+        serviceIntent.putExtra("distanceFilter", distanceFilter);
+        serviceIntent.putExtra("notificationTitle", notificationTitle);
+        serviceIntent.putExtra("notificationText", notificationText);
         ContextCompat.startForegroundService(context, serviceIntent);
         call.resolve();
     }

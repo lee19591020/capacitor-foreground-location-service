@@ -41,10 +41,12 @@ public class CapacitorForegroundLocationService extends Service {
         createNotificationChannel(this);
     }
 
-    private void startLocationUpdates() {
-        LocationRequest locationRequest = LocationRequest.create();
-        locationRequest.setInterval(5000);
-        locationRequest.setPriority(Priority.PRIORITY_HIGH_ACCURACY);
+    private void startLocationUpdates(int interval, int distanceFilter) {
+        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, interval)
+                .setMinUpdateDistanceMeters(distanceFilter)
+                .setWaitForAccurateLocation(false)
+                .setMaxUpdateDelayMillis(interval)
+                .build();
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
@@ -62,7 +64,15 @@ public class CapacitorForegroundLocationService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        Notification notification = getForegroundNotification(this);
+        int interval = intent.getIntExtra("interval", 5000);
+        int distanceFilter = intent.getIntExtra("distanceFilter", 10);
+        String notificationTitle = intent.getStringExtra("notificationTitle");
+        String notificationText = intent.getStringExtra("notificationText");
+
+        if (notificationTitle == null) notificationTitle = "Location Service";
+        if (notificationText == null) notificationText = "Tracking location...";
+
+        Notification notification = getForegroundNotification(this, notificationTitle, notificationText);
         startForeground(235, notification);
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -79,7 +89,7 @@ public class CapacitorForegroundLocationService extends Service {
                 }
             }
         };
-        startLocationUpdates();
+        startLocationUpdates(interval, distanceFilter);
 
         return START_STICKY;
     }
@@ -107,11 +117,11 @@ public class CapacitorForegroundLocationService extends Service {
             Log.e("WHICH", "WHICH: WALA");
         }
     }
-    public Notification getForegroundNotification(Context context) {
+    public Notification getForegroundNotification(Context context, String title, String message) {
         String channelId = "capacitor_foreground_location_service";
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
-                .setContentTitle("Location Tracking")
-                .setContentText("Running in background")
+                .setContentTitle(title)
+                .setContentText(message)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation) // Use your app icon
                 .setPriority(NotificationCompat.PRIORITY_HIGH);
 

@@ -13,6 +13,7 @@ npx cap sync
 
 <docgen-index>
 
+* [`config(...)`](#config)
 * [`requestPermission()`](#requestpermission)
 * [`startService()`](#startservice)
 * [`stopService()`](#stopservice)
@@ -23,6 +24,19 @@ npx cap sync
 
 <docgen-api>
 <!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
+
+### config(...)
+
+```typescript
+config(config: ForegroundLocationConfiguration) => Promise<void>
+```
+
+| Param        | Type                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| **`config`** | <code><a href="#foregroundlocationconfiguration">ForegroundLocationConfiguration</a></code> |
+
+--------------------
+
 
 ### requestPermission()
 
@@ -70,6 +84,16 @@ addListener(eventName: 'locationUpdate', listenerFunc: (location: ForegroundLoca
 
 
 ### Interfaces
+
+
+#### ForegroundLocationConfiguration
+
+| Prop                      | Type                |
+| ------------------------- | ------------------- |
+| **`interval`**            | <code>number</code> |
+| **`distanceFilter`**      | <code>number</code> |
+| **`notificationTitle`**   | <code>string</code> |
+| **`notificationMessage`** | <code>string</code> |
 
 
 #### PermissionResponse
