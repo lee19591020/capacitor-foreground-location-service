@@ -18,6 +18,9 @@ npx cap sync
 * [`startService()`](#startservice)
 * [`stopService()`](#stopservice)
 * [`addListener('locationUpdate', ...)`](#addlistenerlocationupdate-)
+* [`initialize()`](#initialize)
+* [`startUpdatingLocation()`](#startupdatinglocation)
+* [`stopUpdatingLocation()`](#stopupdatinglocation)
 * [Interfaces](#interfaces)
 
 </docgen-index>
@@ -79,6 +82,33 @@ addListener(eventName: 'locationUpdate', listenerFunc: (location: ForegroundLoca
 | **`listenerFunc`** | <code>(location: <a href="#foregroundlocation">ForegroundLocation</a>) =&gt; void</code> |
 
 **Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt; & <a href="#pluginlistenerhandle">PluginListenerHandle</a></code>
+
+--------------------
+
+
+### initialize()
+
+```typescript
+initialize() => Promise<void>
+```
+
+--------------------
+
+
+### startUpdatingLocation()
+
+```typescript
+startUpdatingLocation() => Promise<void>
+```
+
+--------------------
+
+
+### stopUpdatingLocation()
+
+```typescript
+stopUpdatingLocation() => Promise<void>
+```
 
 --------------------
 

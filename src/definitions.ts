@@ -23,4 +23,7 @@ export interface CapacitorForegroundLocationServicePlugin {
     eventName: 'locationUpdate',
     listenerFunc: (location: ForegroundLocation) => void,
   ): Promise<PluginListenerHandle> & PluginListenerHandle;
+  initialize(): Promise<void>;
+  startUpdatingLocation(): Promise<void>;
+  stopUpdatingLocation(): Promise<void>;
 }
