@@ -36,7 +36,8 @@ import com.getcapacitor.annotation.PermissionCallback;
                                 Manifest.permission.FOREGROUND_SERVICE,
                                 Manifest.permission.FOREGROUND_SERVICE_LOCATION,
                                 Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                                Manifest.permission.POST_NOTIFICATIONS
                         }
                 )
         }
@@ -78,7 +79,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
     @PluginMethod
     public void requestPermission(PluginCall call) {
         savedCall = call;
-        if (Build.VERSION.SDK_INT >= 34) {
+        if (Build.VERSION.SDK_INT >= 33) {
             // Android 14+ — request all three: location, foreground service, foreground service location
             bridge.getActivity().runOnUiThread(() -> {
                 requestPermissionForAlias("greater13", savedCall, "permissionRequestResultAndroid13");

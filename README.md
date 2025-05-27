@@ -18,10 +18,11 @@ npx cap sync
 * [`startService()`](#startservice)
 * [`stopService()`](#stopservice)
 * [`addListener('locationUpdate', ...)`](#addlistenerlocationupdate-)
-* [`initialize()`](#initialize)
+* [`initialize(...)`](#initialize)
 * [`startUpdatingLocation()`](#startupdatinglocation)
 * [`stopUpdatingLocation()`](#stopupdatinglocation)
 * [Interfaces](#interfaces)
+* [Enums](#enums)
 
 </docgen-index>
 
@@ -86,11 +87,15 @@ addListener(eventName: 'locationUpdate', listenerFunc: (location: ForegroundLoca
 --------------------
 
 
-### initialize()
+### initialize(...)
 
 ```typescript
-initialize() => Promise<void>
+initialize(config: ForegroundLocationConfigurationIOS) => Promise<void>
 ```
+
+| Param        | Type                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------- |
+| **`config`** | <code><a href="#foregroundlocationconfigurationios">ForegroundLocationConfigurationIOS</a></code> |
 
 --------------------
 
@@ -118,12 +123,14 @@ stopUpdatingLocation() => Promise<void>
 
 #### ForegroundLocationConfiguration
 
-| Prop                      | Type                |
-| ------------------------- | ------------------- |
-| **`interval`**            | <code>number</code> |
-| **`distanceFilter`**      | <code>number</code> |
-| **`notificationTitle`**   | <code>string</code> |
-| **`notificationMessage`** | <code>string</code> |
+| Prop                         | Type                                                                      |
+| ---------------------------- | ------------------------------------------------------------------------- |
+| **`interval`**               | <code>number</code>                                                       |
+| **`distanceFilter`**         | <code>number</code>                                                       |
+| **`notificationTitle`**      | <code>string</code>                                                       |
+| **`notificationMessage`**    | <code>string</code>                                                       |
+| **`notificationImportance`** | <code><a href="#notificationimportance">NotificationImportance</a></code> |
+| **`notificationChannelId`**  | <code>number</code>                                                       |
 
 
 #### PermissionResponse
@@ -146,5 +153,29 @@ stopUpdatingLocation() => Promise<void>
 | --------- | ------------------- |
 | **`lat`** | <code>number</code> |
 | **`lng`** | <code>number</code> |
+
+
+#### ForegroundLocationConfigurationIOS
+
+| Prop                 | Type                                                              |
+| -------------------- | ----------------------------------------------------------------- |
+| **`accuracy`**       | <code>'high' \| 'low'</code>                                      |
+| **`distanceFilter`** | <code>number</code>                                               |
+| **`updateInterval`** | <code>number</code>                                               |
+| **`batteryMode`**    | <code>'default' \| 'fitness' \| 'navigation' \| 'lowPower'</code> |
+
+
+### Enums
+
+
+#### NotificationImportance
+
+| Members       | Value          |
+| ------------- | -------------- |
+| **`MIN`**     | <code>1</code> |
+| **`LWO`**     | <code>2</code> |
+| **`DEFAULT`** | <code>3</code> |
+| **`HIGH`**    | <code>4</code> |
+| **`MAX`**     | <code>5</code> |
 
 </docgen-api>

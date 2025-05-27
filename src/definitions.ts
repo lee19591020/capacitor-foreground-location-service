@@ -4,12 +4,31 @@ export interface ForegroundLocation {
   lat: number;
   lng: number;
 }
+
+export enum NotificationImportance {
+  MIN = 1,
+  LWO = 2,
+  DEFAULT = 3,
+  HIGH = 4,
+  MAX = 5,
+}
+
 export interface ForegroundLocationConfiguration {
   interval: number;
   distanceFilter: number;
   notificationTitle: string;
   notificationMessage: string;
+  notificationImportance: NotificationImportance;
+  notificationChannelId: number;
 }
+
+export interface ForegroundLocationConfigurationIOS {
+  accuracy: 'high' | 'low';
+  distanceFilter: number;
+  updateInterval: number;
+  batteryMode: 'default' | 'fitness' | 'navigation' | 'lowPower';
+}
+
 export interface PermissionResponse {
   granted: boolean;
 }
@@ -23,7 +42,7 @@ export interface CapacitorForegroundLocationServicePlugin {
     eventName: 'locationUpdate',
     listenerFunc: (location: ForegroundLocation) => void,
   ): Promise<PluginListenerHandle> & PluginListenerHandle;
-  initialize(): Promise<void>;
+  initialize(config: ForegroundLocationConfigurationIOS): Promise<void>;
   startUpdatingLocation(): Promise<void>;
   stopUpdatingLocation(): Promise<void>;
 }

@@ -38,7 +38,6 @@ public class CapacitorForegroundLocationService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        createNotificationChannel(this);
     }
 
     private void startLocationUpdates(int interval, int distanceFilter) {
@@ -68,12 +67,14 @@ public class CapacitorForegroundLocationService extends Service {
         int distanceFilter = intent.getIntExtra("distanceFilter", 10);
         String notificationTitle = intent.getStringExtra("notificationTitle");
         String notificationText = intent.getStringExtra("notificationText");
+        int importance = intent.getIntExtra("notificationImportance", NotificationManager.IMPORTANCE_HIGH);
+        int notificationChannelId = intent.getIntExtra("notificationChannelId", 235);
 
         if (notificationTitle == null) notificationTitle = "Location Service";
         if (notificationText == null) notificationText = "Tracking location...";
-
+        createNotificationChannel(this, importance);
         Notification notification = getForegroundNotification(this, notificationTitle, notificationText);
-        startForeground(235, notification);
+        startForeground(notificationChannelId, notification);
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
@@ -100,7 +101,7 @@ public class CapacitorForegroundLocationService extends Service {
         fusedLocationClient.removeLocationUpdates(locationCallback);
     }
 
-    private void createNotificationChannel(Context context) {
+    private void createNotificationChannel(Context context, int importance) {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             String channelId = "capacitor_foreground_location_service";
@@ -108,13 +109,10 @@ public class CapacitorForegroundLocationService extends Service {
             NotificationChannel channel = new NotificationChannel(
                     channelId,
                     channelName,
-                    NotificationManager.IMPORTANCE_HIGH
+                    importance
             );
             NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             manager.createNotificationChannel(channel);
-            Log.e("WHICH", "WHICH: SUD");
-        } else {
-            Log.e("WHICH", "WHICH: WALA");
         }
     }
     public Notification getForegroundNotification(Context context, String title, String message) {
