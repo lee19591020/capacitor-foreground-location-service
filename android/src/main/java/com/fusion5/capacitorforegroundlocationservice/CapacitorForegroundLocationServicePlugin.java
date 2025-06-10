@@ -31,6 +31,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -269,7 +270,8 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         String goefenceData = prefs.getString("geofenceData", null);
         String userData = prefs.getString("userData", null);
         String logsEndpoint = prefs.getString("logsEndpoint", null);
-        if(goefenceData != null && userData != null && logsEndpoint != null){
+        String endPoint = prefs.getString("endPoint", null);
+        if(goefenceData != null && userData != null && logsEndpoint != null && endPoint != null){
             try {
 
                 JSONArray geofenceArray = new JSONObject(goefenceData).getJSONArray("geofenceData");
@@ -294,14 +296,14 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
                         userJson.optString("username", null),
                         userJson.optString("_token", null)
                 );
-                calculateAndSend(geofenceList, user, logsEndpoint, data);
+                calculateAndSend(geofenceList, user, logsEndpoint, data, endPoint);
             } catch (Exception e){
                 Log.e("ERROR", "Something went Wrong:" + e.getMessage());
             }
         }
     }
 
-    private void calculateAndSend(List<GeofenceInformation> geofenceList, User user, String logsEndpoint, JSONObject currentLocationData) throws Exception {
+    private void calculateAndSend(List<GeofenceInformation> geofenceList, User user, String logsEndpoint, JSONObject currentLocationData, String endPoint) throws Exception {
         double lat = currentLocationData.getDouble("lat");
         double lng = currentLocationData.getDouble("lng");
 
@@ -318,6 +320,14 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
                         String.format("%.5f", lng),
                         "Employee just entered the geofence " + geo.getClockDescription()
                 ));
+                sendAutoClocking(user.get_token(), endPoint, new AutoClockingPayload(
+                    String.valueOf(user.getUserId()),
+                    String.format("%.5f", lat),
+                     String.format("%.5f", lng),
+                     true,
+                     geo,
+                     System.currentTimeMillis()
+                ));
                 return;
             }
 
@@ -333,6 +343,14 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
                     String.format("%.5f", lat),
                     String.format("%.5f", lng),
                     "Employee is " + distanceToClock + " closer to " + closest.getGeofence().getClockDescription()
+            ));
+            sendAutoClocking(user.get_token(), endPoint, new AutoClockingPayload(
+                String.valueOf(user.getUserId()),
+                String.format("%.5f", lat),
+                String.format("%.5f", lng),
+                false,
+              closest.getGeofence(),
+              System.currentTimeMillis()
             ));
         }
     }
@@ -375,7 +393,129 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         }
     }
 
-}
+    private void sendAutoClocking(String token, String url, AutoClockingPayload payload){
+
+        retrySendingAutoClocking(token);
+
+        OkHttpClient client = new OkHttpClient();
+        try {
+            JSONObject logJson = payload.toJson();
+            RequestBody body = RequestBody.create(
+                    logJson.toString(),
+                    MediaType.get("application/json; charset=utf-8")
+            );
+
+            Request request = new Request.Builder()
+                    .url(url)
+                    .addHeader("Authorization", "Bearer " + token)
+                    .addHeader("Content-Type", "application/json")
+                    .post(body)
+                    .build();
+
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                  logFailedPostRequest(url, payload, "JSON error: " + e.getMessage());
+                }
+
+                @Override
+                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                    if (!response.isSuccessful()) {
+                      logFailedPostRequest(url, payload, "Error" + response.code());
+                    } else {
+                        Log.i("sendLog", "Log sent successfully");
+                    }
+                }
+            });
+
+        } catch (JSONException e) {
+            Log.e("sendLog", "JSON error: " + e.getMessage());
+        }
+    }
+
+  private void logFailedPostRequest(String endpoint, AutoClockingPayload payload, String errorMessage) {
+    try {
+      Log.e("LogError", "Failed to log failed request: " + errorMessage);
+      SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+
+      JSONObject logData = new JSONObject();
+      logData.put("failedEndpoint", endpoint);
+      logData.put("payload", payload.toJson());
+      logData.put("error", errorMessage);
+
+
+
+      String existingLogs = prefs.getString("failedLogs", "[]");
+      JSONArray logsArray = new JSONArray(existingLogs);
+      logsArray.put(logData);
+
+      SharedPreferences.Editor editor = prefs.edit();
+      editor.putString("failedLogs", logsArray.toString());
+      editor.apply();
+
+    } catch (Exception e) {
+      Log.e("LogError", "Failed to log failed request: " + e.getMessage());
+    }
+  }
+
+  private void retrySendingAutoClocking(String token){
+    OkHttpClient client = new OkHttpClient();
+    SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+    String existingLogs = prefs.getString("failedLogs", "[]");
+    if(existingLogs.isEmpty()){
+      return;
+    }
+    try {
+
+      JSONArray logsArray = new JSONArray(existingLogs);
+      Log.e("LOGS", "retrySendingAutoClocking:" + logsArray.toString());
+      for (int i = 0; i < logsArray.length(); i++) {
+        JSONObject logJson = logsArray.getJSONObject(i);
+        String url = logJson.getString("failedEndpoint");
+
+        RequestBody body = RequestBody.create(
+          logJson.getJSONObject("payload").toString(),
+          MediaType.get("application/json; charset=utf-8")
+        );
+
+        Request request = new Request.Builder()
+          .url(url)
+          .addHeader("Authorization", "Bearer " + token)
+          .addHeader("Content-Type", "application/json")
+          .post(body)
+          .build();
+
+        CountDownLatch latch = new CountDownLatch(1);
+
+        client.newCall(request).enqueue(new Callback() {
+          boolean success = false;
+
+          @Override
+          public void onFailure(@NonNull Call call, @NonNull IOException e) {
+            latch.countDown();
+          }
+
+          @Override
+          public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+            if (response.isSuccessful()) {
+              SharedPreferences.Editor editor = prefs.edit();
+              editor.remove("failedLogs");
+              editor.apply();
+            }
+            latch.countDown();
+          }
+        });
+
+        latch.await(); // wait for response before next retry
+      }
+
+    } catch (InterruptedException e) {
+      Log.e("sendLog", "JSON error: " + e.getMessage());
+    } catch (JSONException e) {
+      Log.e("sendLog", "JSON error: " + e.getMessage());
+    }
+  }
+} // end of plugin
 
 class GeofenceInformation {
     private double lat;
@@ -405,6 +545,14 @@ class GeofenceInformation {
 
     public String getLocationDescription() {
         return locationDescription;
+    }
+    public JSONObject toJson() throws JSONException {
+        JSONObject obj = new JSONObject();
+        obj.put("lat", lat);
+        obj.put("lng", lng);
+        obj.put("radius", radius);
+        obj.put("clockDescription", clockDescription);
+        return obj;
     }
 }
 
@@ -462,6 +610,33 @@ class LogsPayload {
         obj.put("lat", lat);
         obj.put("lng", lng);
         obj.put("message", message);
+        return obj;
+    }
+}
+
+class AutoClockingPayload {
+    private String empId;
+    private String lat;
+    private String lng;
+    private boolean isInside;
+    private GeofenceInformation geofence;
+    private Long timeStamp;
+    public AutoClockingPayload(String empId, String lat, String lng, boolean isInside, GeofenceInformation geofence, Long timeStamp){
+        this.empId = empId;
+        this.lat = lat;
+        this.lng = lng;
+        this.isInside = isInside;
+        this.geofence = geofence;
+        this.timeStamp = timeStamp;
+    }
+    public JSONObject toJson() throws JSONException {
+        JSONObject obj = new JSONObject();
+        obj.put("empId", empId);
+        obj.put("lat", lat);
+        obj.put("lng", lng);
+        obj.put("isInside", isInside);
+        obj.put("geofence", geofence.toJson());
+        obj.put("timeStamp", timeStamp);
         return obj;
     }
 }

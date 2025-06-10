@@ -1,6 +1,6 @@
 {
   "name": "capacitor-foreground-location-service",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "A capacitor plugin for foreground location service in android and iOs",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
