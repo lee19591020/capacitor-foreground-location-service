@@ -552,6 +552,9 @@ class GeofenceInformation {
         obj.put("lng", lng);
         obj.put("radius", radius);
         obj.put("clockDescription", clockDescription);
+        obj.put("clockNumber", clockNumber);
+        obj.put("locationCode", locationCode);
+        obj.put("locationDescription", locationDescription);
         return obj;
     }
 }
