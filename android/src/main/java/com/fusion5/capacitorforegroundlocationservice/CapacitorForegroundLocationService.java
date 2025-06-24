@@ -1,6 +1,7 @@
 package com.fusion5.capacitorforegroundlocationservice;
 
 import android.content.Context;
+import android.os.PowerManager;
 import android.util.Log;
 
 import android.Manifest;
@@ -34,10 +35,15 @@ public class CapacitorForegroundLocationService extends Service {
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
     CapacitorForegroundLocationServicePlugin plugin = CapacitorForegroundLocationServicePlugin.getInstance();
-
+    private PowerManager.WakeLock wakeLock;
     @Override
     public void onCreate() {
         super.onCreate();
+
+        PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+                "CapacitorForegroundLocationService::WakeLockTag");
+        wakeLock.acquire();
     }
 
     private void startLocationUpdates(int interval, int distanceFilter) {
@@ -98,6 +104,9 @@ public class CapacitorForegroundLocationService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+        }
         fusedLocationClient.removeLocationUpdates(locationCallback);
     }
 
@@ -120,6 +129,7 @@ public class CapacitorForegroundLocationService extends Service {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
                 .setContentTitle(title)
                 .setContentText(message)
+                .setOngoing(true)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation) // Use your app icon
                 .setPriority(NotificationCompat.PRIORITY_HIGH);
 
