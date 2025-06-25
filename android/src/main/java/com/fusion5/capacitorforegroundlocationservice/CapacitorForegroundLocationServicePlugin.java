@@ -3,6 +3,7 @@ package com.fusion5.capacitorforegroundlocationservice;
 import static com.fusion5.capacitorforegroundlocationservice.GeoUtils.calculateDistance;
 
 import android.Manifest;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -41,6 +42,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
+
 @CapacitorPlugin(
         name = "CapacitorForegroundLocationService",
         permissions = {
@@ -65,6 +67,7 @@ import okhttp3.Response;
 )
 public class CapacitorForegroundLocationServicePlugin extends Plugin {
 
+    private String TAG = "CapacitorForegroundLocationService";
     private boolean isAppInForeground = true;
     int interval;
     int distanceFilter;
@@ -163,14 +166,31 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
 
     @PluginMethod
     public void startService(PluginCall call) {
+
         Context context = getContext();
-        Intent serviceIntent = new Intent(context, CapacitorForegroundLocationService.class);
-        serviceIntent.putExtra("interval", interval);
-        serviceIntent.putExtra("distanceFilter", distanceFilter);
-        serviceIntent.putExtra("notificationTitle", notificationTitle);
-        serviceIntent.putExtra("notificationText", notificationText);
-        ContextCompat.startForegroundService(context, serviceIntent);
+        if (!isServiceRunning(context)) {
+            Intent serviceIntent = new Intent(context, CapacitorForegroundLocationService.class);
+            serviceIntent.putExtra("interval", interval);
+            serviceIntent.putExtra("distanceFilter", distanceFilter);
+            serviceIntent.putExtra("notificationTitle", notificationTitle);
+            serviceIntent.putExtra("notificationText", notificationText);
+            ContextCompat.startForegroundService(context, serviceIntent);
+            Log.i(TAG, "Capacitor Foreground Location Service started.");
+        } else {
+            Log.i(TAG, "Capacitor Foreground Location Service already running.");
+        }
+
         call.resolve();
+    }
+
+    private static boolean isServiceRunning(Context context) {
+        ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (CapacitorForegroundLocationService.class.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @PluginMethod
