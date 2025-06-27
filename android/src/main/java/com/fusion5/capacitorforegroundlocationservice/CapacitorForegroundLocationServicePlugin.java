@@ -183,6 +183,12 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         call.resolve();
     }
 
+    @PluginMethod
+    public void isLocationServiceRunning(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("running", isServiceRunning(getContext()));
+        call.resolve(result);
+    }
     private static boolean isServiceRunning(Context context) {
         ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {

@@ -42,6 +42,10 @@ export interface OptionResponse {
   result: string;
 }
 
+export interface ServiceRunningResponse {
+  running: boolean
+}
+
 
 export interface Endpoint {
   endPoint: string;
@@ -88,6 +92,7 @@ export interface CapacitorForegroundLocationServicePlugin {
     eventName: 'locationUpdate',
     listenerFunc: (location: ForegroundLocation) => void,
   ): Promise<PluginListenerHandle> & PluginListenerHandle;
+  isLocationServiceRunning(): Promise<ServiceRunningResponse>;
   initialize(config: ForegroundLocationConfigurationIOS): Promise<void>;
   startUpdatingLocation(): Promise<void>;
   stopUpdatingLocation(): Promise<void>;

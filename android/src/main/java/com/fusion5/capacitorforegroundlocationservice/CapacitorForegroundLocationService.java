@@ -36,6 +36,8 @@ public class CapacitorForegroundLocationService extends Service {
     private LocationCallback locationCallback;
     CapacitorForegroundLocationServicePlugin plugin = CapacitorForegroundLocationServicePlugin.getInstance();
     private PowerManager.WakeLock wakeLock;
+
+    private String TAG = "CapacitorForegroundLocationService";
     @Override
     public void onCreate() {
         super.onCreate();
@@ -54,13 +56,6 @@ public class CapacitorForegroundLocationService extends Service {
                 .build();
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return;
         }
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
@@ -69,6 +64,7 @@ public class CapacitorForegroundLocationService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
+        Log.e(TAG, "On start command has been called.");
         int interval = intent.getIntExtra("interval", 5000);
         int distanceFilter = intent.getIntExtra("distanceFilter", 10);
         String notificationTitle = intent.getStringExtra("notificationTitle");
@@ -92,7 +88,7 @@ public class CapacitorForegroundLocationService extends Service {
                     if (plugin != null) {
                         plugin.broadcastLocation(location);
                     }
-                    Log.d("LOCATION", "Location: " + location.getLatitude() + ", " + location.getLongitude());
+                    Log.d(TAG, "Location: " + location.getLatitude() + ", " + location.getLongitude());
                 }
             }
         };
@@ -108,6 +104,7 @@ public class CapacitorForegroundLocationService extends Service {
             wakeLock.release();
         }
         fusedLocationClient.removeLocationUpdates(locationCallback);
+        Log.e(TAG, "Location Service has been destroyed");
     }
 
     private void createNotificationChannel(Context context, int importance) {
@@ -123,6 +120,7 @@ public class CapacitorForegroundLocationService extends Service {
             NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             manager.createNotificationChannel(channel);
         }
+        Log.e(TAG, "Notification channel has been created");
     }
     public Notification getForegroundNotification(Context context, String title, String message) {
         String channelId = "capacitor_foreground_location_service";
@@ -132,7 +130,7 @@ public class CapacitorForegroundLocationService extends Service {
                 .setOngoing(true)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation) // Use your app icon
                 .setPriority(NotificationCompat.PRIORITY_HIGH);
-
+        Log.e(TAG, "Foreground notification has been setup");
         return builder.build();
     }
     @Nullable

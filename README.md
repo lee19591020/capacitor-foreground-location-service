@@ -19,6 +19,7 @@ npx cap sync
 * [`startService()`](#startservice)
 * [`stopService()`](#stopservice)
 * [`addListener('locationUpdate', ...)`](#addlistenerlocationupdate-)
+* [`isLocationServiceRunning()`](#islocationservicerunning)
 * [`initialize(...)`](#initialize)
 * [`startUpdatingLocation()`](#startupdatinglocation)
 * [`stopUpdatingLocation()`](#stopupdatinglocation)
@@ -100,6 +101,17 @@ addListener(eventName: 'locationUpdate', listenerFunc: (location: ForegroundLoca
 | **`listenerFunc`** | <code>(location: <a href="#foregroundlocation">ForegroundLocation</a>) =&gt; void</code> |
 
 **Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt; & <a href="#pluginlistenerhandle">PluginListenerHandle</a></code>
+
+--------------------
+
+
+### isLocationServiceRunning()
+
+```typescript
+isLocationServiceRunning() => Promise<ServiceRunningResponse>
+```
+
+**Returns:** <code>Promise&lt;<a href="#servicerunningresponse">ServiceRunningResponse</a>&gt;</code>
 
 --------------------
 
@@ -235,6 +247,13 @@ stopUpdatingLocation() => Promise<void>
 | **`speed`**    | <code>number</code> |
 | **`bearing`**  | <code>number</code> |
 | **`time`**     | <code>number</code> |
+
+
+#### ServiceRunningResponse
+
+| Prop          | Type                 |
+| ------------- | -------------------- |
+| **`running`** | <code>boolean</code> |
 
 
 #### ForegroundLocationConfigurationIOS
