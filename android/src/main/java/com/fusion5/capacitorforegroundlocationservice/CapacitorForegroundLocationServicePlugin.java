@@ -4,6 +4,9 @@ import static com.fusion5.capacitorforegroundlocationservice.GeoUtils.calculateD
 
 import android.Manifest;
 import android.app.ActivityManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -15,6 +18,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
@@ -42,6 +46,9 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 @CapacitorPlugin(
         name = "CapacitorForegroundLocationService",
@@ -85,6 +92,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             JSObject geofenceDataObj = data.getJSObject("geofenceData");
             JSObject userDataObj = data.getJSObject("userData");
             JSObject logsEndpointObj = data.getJSObject("logsEndpoint");
+            JSObject allowNotificationObj = data.getJSObject("allowNotification");
 
             // Null checks
             if (endpointObj == null || geofenceDataObj == null || userDataObj == null || logsEndpointObj == null) {
@@ -97,6 +105,8 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             String geofenceDataStr = geofenceDataObj.toString(); // store full JSON string
             String userDataStr = userDataObj.toString();         // store full JSON string
             String logsEndpoint = logsEndpointObj.getString("logsEndpoint", null);
+            assert allowNotificationObj != null;
+            boolean allowNotification = Boolean.TRUE.equals(allowNotificationObj.getBoolean("allowNotification", false));
 
             // Final null validation
             if (endpoint == null || logsEndpoint == null) {
@@ -110,6 +120,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             editor.putString("geofenceData", geofenceDataStr);
             editor.putString("userData", userDataStr);
             editor.putString("logsEndpoint", logsEndpoint);
+            editor.putBoolean("allowNotification", allowNotification);
             editor.apply();
 
             JSObject result = new JSObject();
@@ -344,7 +355,8 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
                         String.valueOf(user.getUserId()),
                         String.format("%.5f", lat),
                         String.format("%.5f", lng),
-                        "Employee just entered the geofence " + geo.getClockDescription()
+                        "Employee just entered the geofence " + geo.getClockDescription(),
+                        System.currentTimeMillis()
                 ));
                 sendAutoClocking(user.get_token(), endPoint, new AutoClockingPayload(
                     String.valueOf(user.getUserId()),
@@ -368,7 +380,8 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
                     String.valueOf(user.getUserId()),
                     String.format("%.5f", lat),
                     String.format("%.5f", lng),
-                    "Employee is " + distanceToClock + " closer to " + closest.getGeofence().getClockDescription()
+                    "Employee is " + distanceToClock + " closer to " + closest.getGeofence().getClockDescription(),
+                    System.currentTimeMillis()
             ));
             sendAutoClocking(user.get_token(), endPoint, new AutoClockingPayload(
                 String.valueOf(user.getUserId()),
@@ -442,6 +455,8 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
                 @Override
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
                   logFailedPostRequest(url, payload, "JSON error: " + e.getMessage());
+                    String autoClock = "Lat: " + payload.getLat() + " Lng: " + payload.getLng() + " Clock: " + payload.getGeofence().getClockDescription() + " Time: " + payload.getDateTime();
+                    showNotification("MyWorkplace Geofence",autoClock);
                 }
 
                 @Override
@@ -450,6 +465,12 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
                       logFailedPostRequest(url, payload, "Error" + response.code());
                     } else {
                         Log.i("sendLog", "Log sent successfully");
+                        String autoClock = "Lat: " + payload.getLat() + " Lng: " + payload.getLng() + " Clock: " + payload.getGeofence().getClockDescription() + " Time: " + payload.getDateTime();
+                        if (payload.isClockIn()) {
+                            showNotification("MyWorkplace Geofence clocked in", autoClock);
+                        } else {
+                            showNotification("MyWorkplace Geofence clocked out", autoClock);
+                        }
                     }
                 }
             });
@@ -478,7 +499,12 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
       SharedPreferences.Editor editor = prefs.edit();
       editor.putString("failedLogs", logsArray.toString());
       editor.apply();
-
+        String autoClock = "Lat: " + payload.getLat() + " Lng: " + payload.getLng() + " Clock: " + payload.getGeofence().getClockDescription() + " Time: " + payload.getDateTime();
+        if (payload.isClockIn()) {
+            showNotification("MyWorkplace Geofence clocked in", autoClock);
+        } else {
+            showNotification("MyWorkplace Geofence clocked out", autoClock);
+        }
     } catch (Exception e) {
       Log.e("LogError", "Failed to log failed request: " + e.getMessage());
     }
@@ -513,7 +539,8 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
 
         CountDownLatch latch = new CountDownLatch(1);
 
-        client.newCall(request).enqueue(new Callback() {
+          int finalI = i;
+          client.newCall(request).enqueue(new Callback() {
           boolean success = false;
 
           @Override
@@ -527,7 +554,10 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
               SharedPreferences.Editor editor = prefs.edit();
               editor.remove("failedLogs");
               editor.apply();
+              String retrySent = "retying to send autoclocking" + finalI + " of " + logsArray.length() ;
+              showNotification("MyWorkplace Geofence", "Log sent successfully");
             }
+
             latch.countDown();
           }
         });
@@ -541,6 +571,57 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
       Log.e("sendLog", "JSON error: " + e.getMessage());
     }
   }
+
+  // create notification
+    private static final int NOTIFICATION_ID = 1001;
+    private static final String CHANNEL_ID = "capacitor_foreground_location_service_local_notification";
+    private void showNotification(String title, String message) {
+
+      SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+      boolean allowNotification = Boolean.TRUE.equals(prefs.getBoolean("allowNotification", false));
+      if(allowNotification){
+        NotificationManager notificationManager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          NotificationChannel channel = new NotificationChannel(
+            CHANNEL_ID,
+            "MyWorkplace",
+            NotificationManager.IMPORTANCE_DEFAULT
+          );
+          channel.setDescription("Channel for app notifications");
+          notificationManager.createNotificationChannel(channel);
+        }
+
+        Intent intent = new Intent(getContext(), getActivity().getClass());
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+          getContext(),
+          0,
+          intent,
+          PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+        );
+        int iconId = getContext().getResources().getIdentifier(
+          "local_notification_icon", // icon name defined in the app
+          "drawable",
+          getContext().getPackageName()
+        );
+
+        // Build the notification
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext(), CHANNEL_ID)
+          .setContentTitle(title)
+          .setContentText(message)
+          .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+          .setContentIntent(pendingIntent)
+          .setAutoCancel(true);
+
+        builder.setSmallIcon(iconId != 0 ? iconId : android.R.drawable.ic_dialog_info);
+
+        // Show or update the notification
+        notificationManager.notify(NOTIFICATION_ID, builder.build());
+      }
+
+    }
 } // end of plugin
 
 class GeofenceInformation {
@@ -625,12 +706,14 @@ class LogsPayload {
     private String lat;
     private String lng;
     private String message;
+    private long timeStamp;
 
-    public LogsPayload(String empId, String lat, String lng, String message) {
+    public LogsPayload(String empId, String lat, String lng, String message, long timeStamp) {
         this.empId = empId;
         this.lat = lat;
         this.lng = lng;
         this.message = message;
+        this.timeStamp = timeStamp;
     }
 
     public JSONObject toJson() throws JSONException {
@@ -639,6 +722,7 @@ class LogsPayload {
         obj.put("lat", lat);
         obj.put("lng", lng);
         obj.put("message", message);
+        obj.put("timeStamp", timeStamp);
         return obj;
     }
 }
@@ -667,5 +751,22 @@ class AutoClockingPayload {
         obj.put("geofence", geofence.toJson());
         obj.put("timeStamp", timeStamp);
         return obj;
+    }
+    public String getLat() {
+        return lat;
+    }
+    public String getLng() {
+        return lng;
+    }
+    public String getDateTime() {
+        Date date = new Date(timeStamp); // timeStamp must be in milliseconds
+        SimpleDateFormat formatter = new SimpleDateFormat("MMMM dd, yyyy HH:mm:ss", Locale.getDefault());
+        return formatter.format(date);
+    }
+    public GeofenceInformation getGeofence() {
+        return geofence;
+    }
+    public boolean isClockIn() {
+        return isInside;
     }
 }

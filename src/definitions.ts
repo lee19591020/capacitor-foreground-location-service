@@ -78,6 +78,11 @@ export interface SetApiOptions {
   geofenceData: GeofenceData;
   userData: UserData;
   logsEndpoint: LogsEndpoint;
+  allowNotification: NotificationEnabled;
+}
+
+export interface NotificationEnabled {
+  allowNotification: boolean
 }
 
 type CompleteOrNothing<T> = T | undefined;

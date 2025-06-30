@@ -159,12 +159,13 @@ stopUpdatingLocation() => Promise<void>
 
 #### SetApiOptions
 
-| Prop               | Type                                                  |
-| ------------------ | ----------------------------------------------------- |
-| **`endpoint`**     | <code><a href="#endpoint">Endpoint</a></code>         |
-| **`geofenceData`** | <code><a href="#geofencedata">GeofenceData</a></code> |
-| **`userData`**     | <code><a href="#userdata">UserData</a></code>         |
-| **`logsEndpoint`** | <code><a href="#logsendpoint">LogsEndpoint</a></code> |
+| Prop                    | Type                                                                |
+| ----------------------- | ------------------------------------------------------------------- |
+| **`endpoint`**          | <code><a href="#endpoint">Endpoint</a></code>                       |
+| **`geofenceData`**      | <code><a href="#geofencedata">GeofenceData</a></code>               |
+| **`userData`**          | <code><a href="#userdata">UserData</a></code>                       |
+| **`logsEndpoint`**      | <code><a href="#logsendpoint">LogsEndpoint</a></code>               |
+| **`allowNotification`** | <code><a href="#notificationenabled">NotificationEnabled</a></code> |
 
 
 #### Endpoint
@@ -208,6 +209,13 @@ stopUpdatingLocation() => Promise<void>
 | Prop               | Type                |
 | ------------------ | ------------------- |
 | **`logsEndpoint`** | <code>string</code> |
+
+
+#### NotificationEnabled
+
+| Prop                    | Type                 |
+| ----------------------- | -------------------- |
+| **`allowNotification`** | <code>boolean</code> |
 
 
 #### ForegroundLocationConfiguration
