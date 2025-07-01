@@ -143,7 +143,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             }
             String notificationText = call.getString("notificationMessage");
             if (notificationText == null) {
-                notificationText = "Tracking location in foreground...";
+                notificationText = "Tracking location in background";
             }
 
             // Save to class fields for later use
@@ -455,8 +455,6 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
                 @Override
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
                   logFailedPostRequest(url, payload, "JSON error: " + e.getMessage());
-                    String autoClock = "Lat: " + payload.getLat() + " Lng: " + payload.getLng() + " Clock: " + payload.getGeofence().getClockDescription() + " Time: " + payload.getDateTime();
-                    showNotification("MyWorkplace Geofence",autoClock);
                 }
 
                 @Override
@@ -501,76 +499,89 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
       editor.apply();
         String autoClock = "Lat: " + payload.getLat() + " Lng: " + payload.getLng() + " Clock: " + payload.getGeofence().getClockDescription() + " Time: " + payload.getDateTime();
         if (payload.isClockIn()) {
-            showNotification("MyWorkplace Geofence clocked in", autoClock);
+            showNotification("Offline MyWorkplace Geofence clocked in", autoClock);
         } else {
-            showNotification("MyWorkplace Geofence clocked out", autoClock);
+            showNotification("Offline MyWorkplace Geofence clocked out", autoClock);
         }
     } catch (Exception e) {
       Log.e("LogError", "Failed to log failed request: " + e.getMessage());
     }
   }
 
-  private void retrySendingAutoClocking(String token){
-    OkHttpClient client = new OkHttpClient();
-    SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
-    String existingLogs = prefs.getString("failedLogs", "[]");
-    if(existingLogs.isEmpty()){
-      return;
-    }
-    try {
+    private void retrySendingAutoClocking(String token) {
+        OkHttpClient client = new OkHttpClient();
+        SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+        String existingLogs = prefs.getString("failedLogs", "[]");
 
-      JSONArray logsArray = new JSONArray(existingLogs);
-      Log.e("LOGS", "retrySendingAutoClocking:" + logsArray.toString());
-      for (int i = 0; i < logsArray.length(); i++) {
-        JSONObject logJson = logsArray.getJSONObject(i);
-        String url = logJson.getString("failedEndpoint");
+        if (existingLogs.isEmpty()) {
+            return;
+        }
 
-        RequestBody body = RequestBody.create(
-          logJson.getJSONObject("payload").toString(),
-          MediaType.get("application/json; charset=utf-8")
-        );
+        try {
+            JSONArray logsArray = new JSONArray(existingLogs);
+            Log.e("LOGS", "retrySendingAutoClocking: " + logsArray.toString());
 
-        Request request = new Request.Builder()
-          .url(url)
-          .addHeader("Authorization", "Bearer " + token)
-          .addHeader("Content-Type", "application/json")
-          .post(body)
-          .build();
+            boolean allSuccessful = true;
 
-        CountDownLatch latch = new CountDownLatch(1);
+            for (int i = 0; i < logsArray.length(); i++) {
+                JSONObject logJson = logsArray.getJSONObject(i);
+                String url = logJson.getString("failedEndpoint");
 
-          int finalI = i;
-          client.newCall(request).enqueue(new Callback() {
-          boolean success = false;
+                RequestBody body = RequestBody.create(
+                        logJson.getJSONObject("payload").toString(),
+                        MediaType.get("application/json; charset=utf-8")
+                );
 
-          @Override
-          public void onFailure(@NonNull Call call, @NonNull IOException e) {
-            latch.countDown();
-          }
+                Request request = new Request.Builder()
+                        .url(url)
+                        .addHeader("Authorization", "Bearer " + token)
+                        .addHeader("Content-Type", "application/json")
+                        .post(body)
+                        .build();
 
-          @Override
-          public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-            if (response.isSuccessful()) {
-              SharedPreferences.Editor editor = prefs.edit();
-              editor.remove("failedLogs");
-              editor.apply();
-              String retrySent = "retying to send autoclocking" + finalI + " of " + logsArray.length() ;
-              showNotification("MyWorkplace Geofence", "Log sent successfully");
+                CountDownLatch latch = new CountDownLatch(1);
+
+                final boolean[] requestSuccess = {false};
+
+                int finalI = i;
+                client.newCall(request).enqueue(new Callback() {
+                    @Override
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        Log.e("AutoClocking", "Retry failed: " + e.getMessage());
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                        if (response.isSuccessful()) {
+                            requestSuccess[0] = true;
+                            showNotification("MyWorkplace Syncing", "Processing data: " + (finalI + 1) + " of " + logsArray.length());
+                        } else {
+                            Log.e("AutoClocking", "Retry failed with response code: " + response.code());
+                        }
+                        latch.countDown();
+                    }
+                });
+
+                latch.await(); // wait for this request to complete before continuing
+
+                if (!requestSuccess[0]) {
+                    allSuccessful = false;
+                }
             }
 
-            latch.countDown();
-          }
-        });
+            if (allSuccessful) {
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.remove("failedLogs");
+                editor.apply();
+                Log.i("AutoClocking", "All logs sent successfully. Clearing failedLogs.");
+                showNotification("MyWorkplace Syncing", "Offline clocking has been sync successfully.");
+            }
 
-        latch.await(); // wait for response before next retry
-      }
-
-    } catch (InterruptedException e) {
-      Log.e("sendLog", "JSON error: " + e.getMessage());
-    } catch (JSONException e) {
-      Log.e("sendLog", "JSON error: " + e.getMessage());
+        } catch (InterruptedException | JSONException e) {
+            Log.e("AutoClocking", "Error during retry: " + e.getMessage());
+        }
     }
-  }
 
   // create notification
     private static final int NOTIFICATION_ID = 1001;
