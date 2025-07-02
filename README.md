@@ -20,6 +20,8 @@ npx cap sync
 * [`stopService()`](#stopservice)
 * [`addListener('locationUpdate', ...)`](#addlistenerlocationupdate-)
 * [`isLocationServiceRunning()`](#islocationservicerunning)
+* [`getStoredValue()`](#getstoredvalue)
+* [`getApiOptions()`](#getapioptions)
 * [`initialize(...)`](#initialize)
 * [`startUpdatingLocation()`](#startupdatinglocation)
 * [`stopUpdatingLocation()`](#stopupdatinglocation)
@@ -112,6 +114,28 @@ isLocationServiceRunning() => Promise<ServiceRunningResponse>
 ```
 
 **Returns:** <code>Promise&lt;<a href="#servicerunningresponse">ServiceRunningResponse</a>&gt;</code>
+
+--------------------
+
+
+### getStoredValue()
+
+```typescript
+getStoredValue() => Promise<string>
+```
+
+**Returns:** <code>Promise&lt;string&gt;</code>
+
+--------------------
+
+
+### getApiOptions()
+
+```typescript
+getApiOptions() => Promise<string>
+```
+
+**Returns:** <code>Promise&lt;string&gt;</code>
 
 --------------------
 

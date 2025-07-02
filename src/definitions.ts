@@ -98,6 +98,8 @@ export interface CapacitorForegroundLocationServicePlugin {
     listenerFunc: (location: ForegroundLocation) => void,
   ): Promise<PluginListenerHandle> & PluginListenerHandle;
   isLocationServiceRunning(): Promise<ServiceRunningResponse>;
+  getStoredValue(): Promise<string>;
+  getApiOptions(): Promise<string>;
   initialize(config: ForegroundLocationConfigurationIOS): Promise<void>;
   startUpdatingLocation(): Promise<void>;
   stopUpdatingLocation(): Promise<void>;

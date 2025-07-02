@@ -82,6 +82,38 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
     String notificationText;
 
     @PluginMethod
+    public void getStoredValue(PluginCall call) {
+        try {
+            SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+            String goefenceData = prefs.getString("geofenceData", null);
+            String userData = prefs.getString("userData", null);
+            String logsEndpoint = prefs.getString("logsEndpoint", null);
+            String endPoint = prefs.getString("endPoint", null);
+            JSObject data = new JSObject();
+            data.put("goefenceData", goefenceData);
+            data.put("userData", userData);
+            data.put("logsEndpoint", logsEndpoint);
+            data.put("endPoint", endPoint);
+            call.resolve(data);
+        } catch (Exception e) {
+            call.reject("Error in getStoredValue: " + e.getMessage());
+        }
+    }
+    @PluginMethod
+    public void getApiOptions(PluginCall call) {
+        try {
+            JSObject configData = new JSObject();
+            configData.put("interval", interval);
+            configData.put("distanceFilter", distanceFilter);
+            configData.put("notificationTitle", notificationTitle);
+            configData.put("notificationText", notificationText);
+            call.resolve(configData);
+        } catch (Exception e) {
+            call.reject("Error in getApiOptions: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
     public void setApiOptions(PluginCall call) {
         try {
             // Get the root object
