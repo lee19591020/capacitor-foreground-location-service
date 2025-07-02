@@ -108,7 +108,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             configData.put("interval", interval);
             configData.put("distanceFilter", distanceFilter);
             configData.put("notificationTitle", notificationTitle);
-            configData.put("notificationText", notificationText);
+            configData.put("notificationMessage", notificationText);
             call.resolve(configData);
         } catch (Exception e) {
             call.reject("Error in getApiOptions: " + e.getMessage());
