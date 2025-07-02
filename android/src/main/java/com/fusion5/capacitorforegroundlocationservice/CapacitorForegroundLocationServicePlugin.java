@@ -89,7 +89,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             String userData = prefs.getString("userData", null);
             String logsEndpoint = prefs.getString("logsEndpoint", null);
             String endPoint = prefs.getString("endPoint", null);
-            boolean allowNotification = Boolean.TRUE.equals(allowNotificationObj.getBoolean("allowNotification", false));
+            boolean allowNotification = Boolean.TRUE.equals(prefs.getBoolean("allowNotification", false));
             JSObject data = new JSObject();
             data.put("goefenceData", goefenceData);
             data.put("userData", userData);
