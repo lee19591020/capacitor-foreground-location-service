@@ -121,10 +121,10 @@ isLocationServiceRunning() => Promise<ServiceRunningResponse>
 ### getStoredValue()
 
 ```typescript
-getStoredValue() => Promise<string>
+getStoredValue() => Promise<CompleteOrNothing<SetApiOptions>>
 ```
 
-**Returns:** <code>Promise&lt;string&gt;</code>
+**Returns:** <code>Promise&lt;<a href="#completeornothing">CompleteOrNothing</a>&lt;<a href="#setapioptions">SetApiOptions</a>&gt;&gt;</code>
 
 --------------------
 
@@ -132,10 +132,10 @@ getStoredValue() => Promise<string>
 ### getApiOptions()
 
 ```typescript
-getApiOptions() => Promise<string>
+getApiOptions() => Promise<ForegroundLocationConfiguration>
 ```
 
-**Returns:** <code>Promise&lt;string&gt;</code>
+**Returns:** <code>Promise&lt;<a href="#foregroundlocationconfiguration">ForegroundLocationConfiguration</a>&gt;</code>
 
 --------------------
 
