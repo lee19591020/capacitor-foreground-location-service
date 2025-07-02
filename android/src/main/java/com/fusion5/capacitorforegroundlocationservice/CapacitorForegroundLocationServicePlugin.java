@@ -488,21 +488,27 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                  logFailedPostRequest(url, payload, "JSON error: " + e.getMessage());
+                  logFailedPostRequest(url, payload, "Something went wrong: " + e.getMessage());
                 }
 
                 @Override
                 public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                    if (!response.isSuccessful()) {
-                      logFailedPostRequest(url, payload, "Error" + response.code());
-                    } else {
-                        Log.i("sendLog", "Log sent successfully");
-                        String autoClock = "Lat: " + payload.getLat() + " Lng: " + payload.getLng() + " Clock: " + payload.getGeofence().getClockDescription() + " Time: " + payload.getDateTime();
-                        if (payload.isClockIn()) {
-                            showNotification("MyWorkplace Geofence clocked in", autoClock);
-                        } else {
-                            showNotification("MyWorkplace Geofence clocked out", autoClock);
+                    if(response.isSuccessful()) {
+                        assert response.body() != null;
+                        String responseBody = response.body().string();
+                        try {
+                            JSONObject jsonResponse = new JSONObject(responseBody);
+                            boolean status = jsonResponse.optBoolean("status", false);
+                            String message = jsonResponse.optString("message", "No message received");
+                            if(status){
+                                String autoClockNotification = message + " Time: " + payload.getDateTime();
+                                showNotification("MyWorkplace", autoClockNotification);
+                            }
+                        } catch (JSONException e) {
+                            Log.e("sendLog", "Response JSON parsing error: " + e.getMessage());
                         }
+                    } else {
+                        logFailedPostRequest(url, payload, "Something went wrong");
                     }
                 }
             });
@@ -531,11 +537,13 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
       SharedPreferences.Editor editor = prefs.edit();
       editor.putString("failedLogs", logsArray.toString());
       editor.apply();
-        String autoClock = "Lat: " + payload.getLat() + " Lng: " + payload.getLng() + " Clock: " + payload.getGeofence().getClockDescription() + " Time: " + payload.getDateTime();
+
         if (payload.isClockIn()) {
-            showNotification("Offline MyWorkplace Geofence clocked in", autoClock);
+            String autoClock = "Clocking IN initiated to Clock: " + payload.getGeofence().getClockDescription() + " Time: " + payload.getDateTime();
+            showNotification("MyWorkplace is offline", autoClock);
         } else {
-            showNotification("Offline MyWorkplace Geofence clocked out", autoClock);
+            String autoClock = "Clocking OUT initiated to Clock: " + payload.getGeofence().getClockDescription() + " Time: " + payload.getDateTime();
+            showNotification("MyWorkplace is offline", autoClock);
         }
     } catch (Exception e) {
       Log.e("LogError", "Failed to log failed request: " + e.getMessage());
@@ -587,12 +595,26 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
 
                     @Override
                     public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                        if (response.isSuccessful()) {
+
+                        if(response.isSuccessful()){
                             requestSuccess[0] = true;
-                            showNotification("MyWorkplace Syncing", "Processing data: " + (finalI + 1) + " of " + logsArray.length());
-                        } else {
-                            Log.e("AutoClocking", "Retry failed with response code: " + response.code());
+                            assert response.body() != null;
+                            String responseBody = response.body().string();
+                            try {
+                                JSONObject jsonResponse = new JSONObject(responseBody);
+                                boolean status = jsonResponse.optBoolean("status", false);
+                                String message = jsonResponse.optString("message", "No message received");
+                                JSONObject responseData = jsonResponse.optJSONObject("data");
+                                if(status){
+                                    assert responseData != null;
+                                    String autoClockNotification = message + " Time: " + timeStampToLocalDate(Long.parseLong(responseData.getString("timeStamp")));
+                                    showNotification("MyWorkplace", autoClockNotification);
+                                }
+                            } catch (JSONException e) {
+                                Log.e("sendLog", "Response JSON parsing error: " + e.getMessage());
+                            }
                         }
+
                         latch.countDown();
                     }
                 });
@@ -666,6 +688,11 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         notificationManager.notify(NOTIFICATION_ID, builder.build());
       }
 
+    }
+    private String timeStampToLocalDate(long timeStamp) {
+        Date date = new Date(timeStamp); // timeStamp must be in milliseconds
+        SimpleDateFormat formatter = new SimpleDateFormat("MMMM dd, yyyy HH:mm:ss", Locale.getDefault());
+        return formatter.format(date);
     }
 } // end of plugin
 
