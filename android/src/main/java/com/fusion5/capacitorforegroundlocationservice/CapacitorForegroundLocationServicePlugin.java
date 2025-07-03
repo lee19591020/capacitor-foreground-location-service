@@ -555,13 +555,12 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
         String existingLogs = prefs.getString("failedLogs", "[]");
 
-        if (existingLogs.isEmpty()) {
-            return;
-        }
 
         try {
             JSONArray logsArray = new JSONArray(existingLogs);
-            Log.e("LOGS", "retrySendingAutoClocking: " + logsArray.toString());
+            if (logsArray.length() == 0) {
+                return;
+            }
 
             boolean allSuccessful = true;
 
