@@ -90,12 +90,14 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             String logsEndpoint = prefs.getString("logsEndpoint", null);
             String endPoint = prefs.getString("endPoint", null);
             boolean allowNotification = Boolean.TRUE.equals(prefs.getBoolean("allowNotification", false));
+            JSONObject allowNotificationJSON = new JSONObject();
+            allowNotificationJSON.put("allowNotification", allowNotification);
             JSObject data = new JSObject();
             data.put("goefenceData", goefenceData);
             data.put("userData", userData);
             data.put("logsEndpoint", logsEndpoint);
             data.put("endPoint", endPoint);
-            data.put("allowNotification", allowNotification);
+            data.put("allowNotification", allowNotificationJSON);
             call.resolve(data);
         } catch (Exception e) {
             call.reject("Error in getStoredValue: " + e.getMessage());
