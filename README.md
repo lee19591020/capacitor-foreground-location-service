@@ -22,6 +22,7 @@ npx cap sync
 * [`isLocationServiceRunning()`](#islocationservicerunning)
 * [`getStoredValue()`](#getstoredvalue)
 * [`getApiOptions()`](#getapioptions)
+* [`setClockInHistory(...)`](#setclockinhistory)
 * [`initialize(...)`](#initialize)
 * [`startUpdatingLocation()`](#startupdatinglocation)
 * [`stopUpdatingLocation()`](#stopupdatinglocation)
@@ -136,6 +137,21 @@ getApiOptions() => Promise<ForegroundLocationConfiguration>
 ```
 
 **Returns:** <code>Promise&lt;<a href="#foregroundlocationconfiguration">ForegroundLocationConfiguration</a>&gt;</code>
+
+--------------------
+
+
+### setClockInHistory(...)
+
+```typescript
+setClockInHistory(clockHistory: SetClockHistoryPayload) => Promise<SetClockHistoryResponse>
+```
+
+| Param              | Type                                                                      |
+| ------------------ | ------------------------------------------------------------------------- |
+| **`clockHistory`** | <code><a href="#setclockhistorypayload">SetClockHistoryPayload</a></code> |
+
+**Returns:** <code>Promise&lt;<a href="#setclockhistoryresponse">SetClockHistoryResponse</a>&gt;</code>
 
 --------------------
 
@@ -286,6 +302,22 @@ stopUpdatingLocation() => Promise<void>
 | Prop          | Type                 |
 | ------------- | -------------------- |
 | **`running`** | <code>boolean</code> |
+
+
+#### SetClockHistoryResponse
+
+| Prop         | Type                |
+| ------------ | ------------------- |
+| **`status`** | <code>string</code> |
+
+
+#### SetClockHistoryPayload
+
+| Prop               | Type                       |
+| ------------------ | -------------------------- |
+| **`clockNumber`**  | <code>number</code>        |
+| **`clockingType`** | <code>'in' \| 'out'</code> |
+| **`timestamp`**    | <code>number</code>        |
 
 
 #### ForegroundLocationConfigurationIOS

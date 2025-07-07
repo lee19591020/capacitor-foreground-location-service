@@ -85,6 +85,16 @@ export interface NotificationEnabled {
   allowNotification: boolean
 }
 
+export interface SetClockHistoryResponse {
+  status: string
+}
+
+export interface SetClockHistoryPayload {
+  clockNumber: number;
+  clockingType: 'in' | 'out';
+  timestamp: number;
+}
+
 type CompleteOrNothing<T> = T | undefined;
 
 export interface CapacitorForegroundLocationServicePlugin {
@@ -100,6 +110,8 @@ export interface CapacitorForegroundLocationServicePlugin {
   isLocationServiceRunning(): Promise<ServiceRunningResponse>;
   getStoredValue(): Promise<CompleteOrNothing<SetApiOptions>>;
   getApiOptions(): Promise<ForegroundLocationConfiguration>;
+  setClockInHistory(clockHistory: SetClockHistoryPayload): Promise<SetClockHistoryResponse>;
+  // ios part
   initialize(config: ForegroundLocationConfigurationIOS): Promise<void>;
   startUpdatingLocation(): Promise<void>;
   stopUpdatingLocation(): Promise<void>;
