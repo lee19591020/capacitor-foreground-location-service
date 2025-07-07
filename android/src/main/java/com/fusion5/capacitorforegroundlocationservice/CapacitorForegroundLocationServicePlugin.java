@@ -479,8 +479,6 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
           return;
       }
 
-
-
         OkHttpClient client = new OkHttpClient.Builder()
           .connectTimeout(5, TimeUnit.SECONDS)  // Connection timeout
           .readTimeout(5, TimeUnit.SECONDS)     // Time to wait for server response
@@ -537,7 +535,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
 
   private void logFailedPostRequest(String endpoint, AutoClockingPayload payload, String errorMessage) {
     try {
-      boolean clockType = payload.isClockIn();
+      String clockType = payload.clockType();
       int clockNumber = payload.getGeofence().getClockNumber();
       long timeStamp = payload.getTimeStamp();
       boolean alreadyClockedIn = hasClockedIn(clockNumber, timeStamp);
@@ -547,8 +545,10 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         Log.i(TAG, "Already done clocking in and out today");
         return;
       }
+      Log.e(TAG,"RESULT LOCKEC: " + clockType.equals("in"));
+      Log.e(TAG,"RESULT: " + (alreadyClockedIn && payload.clockType().equals("out")));
+      if (clockType.equals("in") && !alreadyClockedIn) {
 
-      if (clockType) {
         String autoClock = "Clocking IN initiated to Clock: " + payload.getGeofence().getClockDescription() +
           " Time: " + payload.getDateTime();
         showNotification("MyWorkplace is offline", autoClock);
@@ -565,7 +565,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
 
         prefs.edit().putString("failedLogs", logsArray.toString()).apply();
       }
-      if(!clockType && alreadyClockedIn) {
+      else if(alreadyClockedIn && payload.clockType().equals("out")) {
         String autoClock = "Clocking OUT initiated to Clock: " + payload.getGeofence().getClockDescription() +
           " Time: " + payload.getDateTime();
         showNotification("MyWorkplace is offline", autoClock);
@@ -582,7 +582,9 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
 
         prefs.edit().putString("failedLogs", logsArray.toString()).apply();
       }
-
+      else {
+        Log.i(TAG, "WALAy Clocking");
+      }
     } catch (Exception e) {
       Log.e("LogError", "Exception while logging failed request: " + e.getMessage());
     }
@@ -592,7 +594,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         OkHttpClient client = new OkHttpClient();
         SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
         String existingLogs = prefs.getString("failedLogs", "[]");
-
+        Log.e(TAG,"EXISTING: " + existingLogs);
         try {
             JSONArray logsArray = new JSONArray(existingLogs);
             if (logsArray.length() == 0) return;
