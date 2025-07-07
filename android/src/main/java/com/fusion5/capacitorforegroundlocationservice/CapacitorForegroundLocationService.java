@@ -62,7 +62,7 @@ public class CapacitorForegroundLocationService extends Service {
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public int onStartCommand(@NonNull Intent intent, int flags, int startId) {
 
         Log.e(TAG, "On start command has been called.");
         int interval = intent.getIntExtra("interval", 5000);

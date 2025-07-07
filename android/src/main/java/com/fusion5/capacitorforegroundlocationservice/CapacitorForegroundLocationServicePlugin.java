@@ -49,6 +49,7 @@ import okhttp3.Response;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 @CapacitorPlugin(
         name = "CapacitorForegroundLocationService",
@@ -468,11 +469,24 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         }
     }
 
-    private void sendAutoClocking(String token, String url, AutoClockingPayload payload){
+    private void sendAutoClocking(String token, String url, AutoClockingPayload payload) {
 
-        retrySendingAutoClocking(token);
+      retrySendingAutoClocking(token);
+      Log.i(TAG,"Has clockin: " + hasClockedIn(payload.getGeofence().getClockNumber(), payload.getTimeStamp()));
+      Log.i(TAG,"Has Clocout: " + hasClockedOut(payload.getGeofence().getClockNumber(), payload.getTimeStamp()));
+      if (hasClockedIn(payload.getGeofence().getClockNumber(), payload.getTimeStamp()) && hasClockedOut(payload.getGeofence().getClockNumber(), payload.getTimeStamp()) ) {
+          Log.i("ClockHistory", "Already clocked " + (payload.isClockIn() ? "in" : "out") + " today for " + payload.getGeofence().getClockDescription());
+          return;
+      }
 
-        OkHttpClient client = new OkHttpClient();
+
+
+        OkHttpClient client = new OkHttpClient.Builder()
+          .connectTimeout(5, TimeUnit.SECONDS)  // Connection timeout
+          .readTimeout(5, TimeUnit.SECONDS)     // Time to wait for server response
+          .writeTimeout(5, TimeUnit.SECONDS)    // Time to send the request body
+          .build();
+
         try {
             JSONObject logJson = payload.toJson();
             RequestBody body = RequestBody.create(
@@ -486,31 +500,31 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
                     .addHeader("Content-Type", "application/json")
                     .post(body)
                     .build();
-
+          Log.i(TAG, "Rquesting Clocking " + (payload.isClockIn() ? "IN" : "OUT"));
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                  logFailedPostRequest(url, payload, "Something went wrong: " + e.getMessage());
+                  Log.i(TAG, "Rquesting Clocking " + (payload.isClockIn() ? "IN" : "OUT") + " FAiled to proceed to offline");
+                    logFailedPostRequest(url, payload, "Something went wrong: " + e.getMessage());
                 }
 
                 @Override
                 public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                    if(response.isSuccessful()) {
+                    if (response.isSuccessful()) {
                         assert response.body() != null;
                         String responseBody = response.body().string();
                         try {
                             JSONObject jsonResponse = new JSONObject(responseBody);
                             boolean status = jsonResponse.optBoolean("status", false);
                             String message = jsonResponse.optString("message", "No message received");
-                            if(status){
+                            if (status) {
+                                saveClockHistory(payload.getGeofence().getClockNumber(), payload.clockType(), payload.getTimeStamp());
                                 String autoClockNotification = message + " Time: " + payload.getDateTime();
                                 showNotification("MyWorkplace", autoClockNotification);
                             }
                         } catch (JSONException e) {
                             Log.e("sendLog", "Response JSON parsing error: " + e.getMessage());
                         }
-                    } else {
-                        logFailedPostRequest(url, payload, "Something went wrong");
                     }
                 }
             });
@@ -520,58 +534,94 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         }
     }
 
+
   private void logFailedPostRequest(String endpoint, AutoClockingPayload payload, String errorMessage) {
     try {
-      Log.e("LogError", "Failed to log failed request: " + errorMessage);
-      SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+      boolean clockType = payload.isClockIn();
+      int clockNumber = payload.getGeofence().getClockNumber();
+      long timeStamp = payload.getTimeStamp();
+      boolean alreadyClockedIn = hasClockedIn(clockNumber, timeStamp);
+      boolean alreadyClockedOut = hasClockedOut(clockNumber, timeStamp);
 
-      JSONObject logData = new JSONObject();
-      logData.put("failedEndpoint", endpoint);
-      logData.put("payload", payload.toJson());
-      logData.put("error", errorMessage);
+      if (alreadyClockedIn &&  alreadyClockedOut) {
+        Log.i(TAG, "Already done clocking in and out today");
+        return;
+      }
 
+      if (clockType) {
+        String autoClock = "Clocking IN initiated to Clock: " + payload.getGeofence().getClockDescription() +
+          " Time: " + payload.getDateTime();
+        showNotification("MyWorkplace is offline", autoClock);
+        saveClockHistory(clockNumber, "in", timeStamp);
+        SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+        JSONObject logData = new JSONObject();
+        logData.put("failedEndpoint", endpoint);
+        logData.put("payload", payload.toJson());
+        logData.put("error", errorMessage);
 
+        String existingLogs = prefs.getString("failedLogs", "[]");
+        JSONArray logsArray = new JSONArray(existingLogs);
+        logsArray.put(logData);
 
-      String existingLogs = prefs.getString("failedLogs", "[]");
-      JSONArray logsArray = new JSONArray(existingLogs);
-      logsArray.put(logData);
+        prefs.edit().putString("failedLogs", logsArray.toString()).apply();
+      }
+      if(!clockType && alreadyClockedIn) {
+        String autoClock = "Clocking OUT initiated to Clock: " + payload.getGeofence().getClockDescription() +
+          " Time: " + payload.getDateTime();
+        showNotification("MyWorkplace is offline", autoClock);
+        saveClockHistory(clockNumber, "out", timeStamp);
+        SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+        JSONObject logData = new JSONObject();
+        logData.put("failedEndpoint", endpoint);
+        logData.put("payload", payload.toJson());
+        logData.put("error", errorMessage);
 
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putString("failedLogs", logsArray.toString());
-      editor.apply();
+        String existingLogs = prefs.getString("failedLogs", "[]");
+        JSONArray logsArray = new JSONArray(existingLogs);
+        logsArray.put(logData);
 
-        if (payload.isClockIn()) {
-            String autoClock = "Clocking IN initiated to Clock: " + payload.getGeofence().getClockDescription() + " Time: " + payload.getDateTime();
-            showNotification("MyWorkplace is offline", autoClock);
-        } else {
-            String autoClock = "Clocking OUT initiated to Clock: " + payload.getGeofence().getClockDescription() + " Time: " + payload.getDateTime();
-            showNotification("MyWorkplace is offline", autoClock);
-        }
+        prefs.edit().putString("failedLogs", logsArray.toString()).apply();
+      }
+
     } catch (Exception e) {
-      Log.e("LogError", "Failed to log failed request: " + e.getMessage());
+      Log.e("LogError", "Exception while logging failed request: " + e.getMessage());
     }
   }
 
-    private void retrySendingAutoClocking(String token) {
+  private void retrySendingAutoClocking(String token) {
         OkHttpClient client = new OkHttpClient();
         SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
         String existingLogs = prefs.getString("failedLogs", "[]");
 
-
         try {
             JSONArray logsArray = new JSONArray(existingLogs);
-            if (logsArray.length() == 0) {
-                return;
-            }
+            if (logsArray.length() == 0) return;
 
             boolean allSuccessful = true;
 
             for (int i = 0; i < logsArray.length(); i++) {
                 JSONObject logJson = logsArray.getJSONObject(i);
                 String url = logJson.getString("failedEndpoint");
+                JSONObject payloadJson = logJson.getJSONObject("payload");
+                AutoClockingPayload payload = new AutoClockingPayload(
+                        payloadJson.getString("empId"),
+                        payloadJson.getString("lat"),
+                        payloadJson.getString("lng"),
+                        payloadJson.getBoolean("isInside"),
+                        new GeofenceInformation(
+                                payloadJson.getJSONObject("geofence").getDouble("lat"),
+                                payloadJson.getJSONObject("geofence").getDouble("lng"),
+                                payloadJson.getJSONObject("geofence").getDouble("radius"),
+                                payloadJson.getJSONObject("geofence").getString("clockDescription"),
+                                payloadJson.getJSONObject("geofence").getInt("clockNumber"),
+                                payloadJson.getJSONObject("geofence").getString("locationCode"),
+                                payloadJson.getJSONObject("geofence").getString("locationDescription")
+                        ),
+                        payloadJson.getLong("timeStamp")
+                );
 
                 RequestBody body = RequestBody.create(
-                        logJson.getJSONObject("payload").toString(),
+                        payload.toJson().toString(),
                         MediaType.get("application/json; charset=utf-8")
                 );
 
@@ -583,10 +633,8 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
                         .build();
 
                 CountDownLatch latch = new CountDownLatch(1);
-
                 final boolean[] requestSuccess = {false};
 
-                int finalI = i;
                 client.newCall(request).enqueue(new Callback() {
                     @Override
                     public void onFailure(@NonNull Call call, @NonNull IOException e) {
@@ -596,8 +644,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
 
                     @Override
                     public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-
-                        if(response.isSuccessful()){
+                        if (response.isSuccessful()) {
                             requestSuccess[0] = true;
                             assert response.body() != null;
                             String responseBody = response.body().string();
@@ -606,21 +653,15 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
                                 boolean status = jsonResponse.optBoolean("status", false);
                                 String message = jsonResponse.optString("message", "No message received");
                                 JSONObject responseData = jsonResponse.optJSONObject("data");
-                                if(status){
-                                    assert responseData != null;
-                                    String autoClockNotification = message + " Time: " + timeStampToLocalDate(Long.parseLong(responseData.getString("timeStamp")));
-                                    showNotification("MyWorkplace", autoClockNotification);
-                                }
                             } catch (JSONException e) {
                                 Log.e("sendLog", "Response JSON parsing error: " + e.getMessage());
                             }
                         }
-
                         latch.countDown();
                     }
                 });
 
-                latch.await(); // wait for this request to complete before continuing
+                latch.await();
 
                 if (!requestSuccess[0]) {
                     allSuccessful = false;
@@ -628,17 +669,16 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             }
 
             if (allSuccessful) {
-                SharedPreferences.Editor editor = prefs.edit();
-                editor.remove("failedLogs");
-                editor.apply();
+                prefs.edit().remove("failedLogs").apply();
                 Log.i("AutoClocking", "All logs sent successfully. Clearing failedLogs.");
-                showNotification("MyWorkplace Syncing", "Offline clocking has been sync successfully.");
+                showNotification("MyWorkplace Syncing", "Offline clocking has been synced successfully.");
             }
 
         } catch (InterruptedException | JSONException e) {
             Log.e("AutoClocking", "Error during retry: " + e.getMessage());
         }
     }
+
 
   // create notification
     private static final int NOTIFICATION_ID = 1001;
@@ -695,6 +735,80 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         SimpleDateFormat formatter = new SimpleDateFormat("MMMM dd, yyyy HH:mm:ss", Locale.getDefault());
         return formatter.format(date);
     }
+
+  private boolean hasClockedIn(int clockNumber, long timeStamp) {
+    SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+    String logsJson = prefs.getString("clockHistory", "{}");
+    try {
+      JSONObject history = new JSONObject(logsJson);
+      String dateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date(timeStamp));
+      JSONObject dayEntry = history.optJSONObject(dateKey);
+      if (dayEntry == null) return false;
+
+      String clockKey = String.valueOf(clockNumber);
+      JSONObject geofenceEntry = dayEntry.optJSONObject(clockKey);
+      if (geofenceEntry == null) return false;
+
+      return geofenceEntry.optBoolean("in", false);
+
+    } catch (JSONException e) {
+      Log.e("ClockHistory", "Error reading clock history: " + e.getMessage());
+      return false;
+    }
+  }
+  private boolean hasClockedOut(int clockNumber, long timeStamp) {
+    SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+    String logsJson = prefs.getString("clockHistory", "{}");
+    try {
+      JSONObject history = new JSONObject(logsJson);
+      String dateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date(timeStamp));
+      JSONObject dayEntry = history.optJSONObject(dateKey);
+      if (dayEntry == null) return false;
+
+      String clockKey = String.valueOf(clockNumber);
+      JSONObject geofenceEntry = dayEntry.optJSONObject(clockKey);
+      if (geofenceEntry == null) return false;
+      Log.i(TAG, logsJson);
+      return geofenceEntry.optBoolean("out", false);
+
+    } catch (JSONException e) {
+      Log.e("ClockHistory", "Error reading clock history: " + e.getMessage());
+      return false;
+    }
+  }
+
+  private void saveClockHistory(int clockNumber, String type, long timeStamp) {
+    SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+    String logsJson = prefs.getString("clockHistory", "{}");
+    try {
+      JSONObject history = new JSONObject(logsJson);
+      String dateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date(timeStamp));
+      JSONObject dayEntry = history.optJSONObject(dateKey);
+      if (dayEntry == null) {
+        dayEntry = new JSONObject();
+        history.put(dateKey, dayEntry);
+      }
+
+      String clockKey = String.valueOf(clockNumber); // convert int to string
+      JSONObject geofenceEntry = dayEntry.optJSONObject(clockKey);
+      if (geofenceEntry == null) {
+        geofenceEntry = new JSONObject();
+        dayEntry.put(clockKey, geofenceEntry);
+      }
+
+      if (type.equals("in")) {
+        geofenceEntry.put("in", true);
+      }
+      if(type.equals("out")) {
+        geofenceEntry.put("out", true);
+      }
+      Log.i("ClockHistory", "Saved clock history: " + history.toString());
+      prefs.edit().putString("clockHistory", history.toString()).apply();
+    } catch (JSONException e) {
+      Log.e("ClockHistory", "Error saving clock history: " + e.getMessage());
+    }
+  }
+
 } // end of plugin
 
 class GeofenceInformation {
@@ -804,6 +918,7 @@ class AutoClockingPayload {
     private String empId;
     private String lat;
     private String lng;
+    private String clockType;
     private boolean isInside;
     private GeofenceInformation geofence;
     private Long timeStamp;
@@ -841,5 +956,13 @@ class AutoClockingPayload {
     }
     public boolean isClockIn() {
         return isInside;
+    }
+
+    public Long getTimeStamp() {
+        return timeStamp;
+    }
+
+    public String clockType(){
+      return this.isInside ? "in": "out";
     }
 }
