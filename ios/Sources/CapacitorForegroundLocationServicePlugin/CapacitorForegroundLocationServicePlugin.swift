@@ -148,11 +148,11 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
 
         notifyListeners("locationUpdate", data: [
             "lat": location.coordinate.latitude,
-            "lng": location.coordinate.longitude
+            "lng": location.coordinate.longitude,
             "altitude": location.altitude,
-            "accuracy": location.accuracy,
+            "accuracy": 100,
             "speed": location.speed,
-            "bearing": location.bearing,
+            "bearing": 0,
             "time": lastUpdateTime
         ])
     }
