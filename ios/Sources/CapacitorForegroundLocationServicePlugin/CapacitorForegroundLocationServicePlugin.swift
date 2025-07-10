@@ -14,7 +14,9 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         CAPPluginMethod(name: "requestPermission", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestPermissionAlways", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startUpdatingLocation", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "stopUpdatingLocation", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "stopUpdatingLocation", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "appIsInBackground", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "showLocalNotification", returnType: CAPPluginReturnPromise)
     ]
 
     private var locationManager: CLLocationManager?
@@ -55,15 +57,25 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
     }
 
     // MARK: - App State Events
-    @objc private func appDidEnterBackground() {
-        print("App moved to background")
-        if isHighFrequencyRunning {
-            locationManager?.stopUpdatingLocation()
-            print("stoping frequent location")
-            locationManager?.startMonitoringSignificantLocationChanges()
-            print("starting low power location request.")
-        }
-    }
+  @objc private func appDidEnterBackground() {
+      print("App moved to background")
+
+      if isHighFrequencyRunning {
+          locationManager?.allowsBackgroundLocationUpdates = true
+
+          // TEMP: Start updating for a short while to ensure geofence/position
+          locationManager?.startUpdatingLocation()
+
+          // Schedule a fallback to switch to significant changes after 1-2 mins
+          DispatchQueue.main.asyncAfter(deadline: .now() + 120) {
+              self.locationManager?.stopUpdatingLocation()
+              self.locationManager?.startMonitoringSignificantLocationChanges()
+              print("Switched to low-power significant changes mode.")
+          }
+
+          print("Started high-precision background updates temporarily.")
+      }
+  }
 
     @objc private func appDidBecomeActive() {
         print("App became active (foreground)")
@@ -103,18 +115,35 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
 
         permissionCall = call
 
-        switch CLLocationManager.authorizationStatus() {
-        case .notDetermined:
-            locationManager.requestWhenInUseAuthorization()
-        case .authorizedWhenInUse:
-            locationManager.requestAlwaysAuthorization()
-        case .authorizedAlways:
-            call.resolve(["granted": true])
-            permissionCall = nil
-        default:
-            call.resolve(["granted": false])
-            permissionCall = nil
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            if let error = error {
+                print("Notification permission error: \(error.localizedDescription)")
+            } else {
+                print("Notification permission granted: \(granted)")
+            }
+
+            // Step 2: Continue with location permission
+            DispatchQueue.main.async {
+                let status = CLLocationManager.authorizationStatus()
+
+                switch status {
+                case .notDetermined:
+                    locationManager.requestWhenInUseAuthorization()
+                case .authorizedWhenInUse:
+                    locationManager.requestAlwaysAuthorization()
+                case .authorizedAlways:
+                    call.resolve(["granted": true])
+                    self.permissionCall = nil
+                case .denied, .restricted:
+                    call.resolve(["granted": false])
+                    self.permissionCall = nil
+                @unknown default:
+                    call.resolve(["granted": false])
+                    self.permissionCall = nil
+                }
+            }
         }
+
     }
 
     @objc func requestPermissionAlways(_ call: CAPPluginCall) {
@@ -226,4 +255,35 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
             permissionCall = nil
         }
     }
-}
+
+    @objc func appIsInBackground(_ call: CAPPluginCall) {
+      DispatchQueue.main.async {
+          let isBackground = UIApplication.shared.applicationState == .background
+          call.resolve(["isBackground": isBackground])
+      }
+    }
+
+    @objc func showLocalNotification(_ call: CAPPluginCall) {
+        let title = call.getString("title") ?? "Notification"
+        let body = call.getString("body") ?? "No notification body"
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = UNNotificationSound.default
+
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                call.reject("Failed to schedule notification: \(error.localizedDescription)")
+            } else {
+                call.resolve()
+            }
+        }
+    }
+} // end class

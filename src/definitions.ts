@@ -96,6 +96,15 @@ export interface SetClockHistoryPayload {
 
 type CompleteOrNothing<T> = T | undefined;
 
+export interface BackgroundNotification {
+  isBackground: boolean;
+}
+
+export interface NotificationOptionsiOs {
+  title: string;
+  body: string;
+}
+
 export interface CapacitorForegroundLocationServicePlugin {
   setApiOptions(apiOptions: CompleteOrNothing<SetApiOptions>): Promise<OptionResponse>;
   config(config: ForegroundLocationConfiguration): Promise<void>;
@@ -114,4 +123,6 @@ export interface CapacitorForegroundLocationServicePlugin {
   initialize(config: ForegroundLocationConfigurationIOS): Promise<void>;
   startUpdatingLocation(): Promise<void>;
   stopUpdatingLocation(): Promise<void>;
+  appIsInBackground(): Promise<BackgroundNotification>;
+  showLocalNotification(options: NotificationOptionsiOs): Promise<void>;
 }

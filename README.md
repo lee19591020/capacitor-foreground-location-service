@@ -26,6 +26,8 @@ npx cap sync
 * [`initialize(...)`](#initialize)
 * [`startUpdatingLocation()`](#startupdatinglocation)
 * [`stopUpdatingLocation()`](#stopupdatinglocation)
+* [`appIsInBackground()`](#appisinbackground)
+* [`showLocalNotification(...)`](#showlocalnotification)
 * [Interfaces](#interfaces)
 * [Type Aliases](#type-aliases)
 * [Enums](#enums)
@@ -187,6 +189,30 @@ stopUpdatingLocation() => Promise<void>
 --------------------
 
 
+### appIsInBackground()
+
+```typescript
+appIsInBackground() => Promise<BackgroundNotification>
+```
+
+**Returns:** <code>Promise&lt;<a href="#backgroundnotification">BackgroundNotification</a>&gt;</code>
+
+--------------------
+
+
+### showLocalNotification(...)
+
+```typescript
+showLocalNotification(options: NotificationOptionsiOs) => Promise<void>
+```
+
+| Param         | Type                                                                      |
+| ------------- | ------------------------------------------------------------------------- |
+| **`options`** | <code><a href="#notificationoptionsios">NotificationOptionsiOs</a></code> |
+
+--------------------
+
+
 ### Interfaces
 
 
@@ -328,6 +354,21 @@ stopUpdatingLocation() => Promise<void>
 | **`distanceFilter`** | <code>number</code>                                               |
 | **`updateInterval`** | <code>number</code>                                               |
 | **`batteryMode`**    | <code>'default' \| 'fitness' \| 'navigation' \| 'lowPower'</code> |
+
+
+#### BackgroundNotification
+
+| Prop               | Type                 |
+| ------------------ | -------------------- |
+| **`isBackground`** | <code>boolean</code> |
+
+
+#### NotificationOptionsiOs
+
+| Prop        | Type                |
+| ----------- | ------------------- |
+| **`title`** | <code>string</code> |
+| **`body`**  | <code>string</code> |
 
 
 ### Type Aliases
