@@ -43,15 +43,14 @@ export interface OptionResponse {
 }
 
 export interface ServiceRunningResponse {
-  running: boolean
+  running: boolean;
 }
-
 
 export interface Endpoint {
   endPoint: string;
 }
 export interface GeofenceData {
-  geofenceData: Geofence[]
+  geofenceData: Geofence[];
 }
 
 export interface Geofence {
@@ -65,9 +64,9 @@ export interface Geofence {
 }
 
 export interface UserData {
-  username: string,
-  userId: number,
-  _token: string,
+  username: string;
+  userId: number;
+  _token: string;
 }
 export interface LogsEndpoint {
   logsEndpoint: string;
@@ -82,11 +81,11 @@ export interface SetApiOptions {
 }
 
 export interface NotificationEnabled {
-  allowNotification: boolean
+  allowNotification: boolean;
 }
 
 export interface SetClockHistoryResponse {
-  status: string
+  status: string;
 }
 
 export interface SetClockHistoryPayload {
@@ -111,7 +110,7 @@ export interface CapacitorForegroundLocationServicePlugin {
   getStoredValue(): Promise<CompleteOrNothing<SetApiOptions>>;
   getApiOptions(): Promise<ForegroundLocationConfiguration>;
   setClockInHistory(clockHistory: SetClockHistoryPayload): Promise<SetClockHistoryResponse>;
-  // ios part
+  // iOS specific
   initialize(config: ForegroundLocationConfigurationIOS): Promise<void>;
   startUpdatingLocation(): Promise<void>;
   stopUpdatingLocation(): Promise<void>;
