@@ -68,7 +68,7 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         let empId: String
         let lat: String
         let lng: String
-        let description: String
+        let message: String
         let timestamp: Int
     }
 
@@ -138,7 +138,7 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
 
     @objc private func appDidBecomeActive() {
         print("App became active (foreground)")
-        self.appInBackground = true
+        self.appInBackground = false
         if isHighFrequencyRunning {
           locationManager?.startUpdatingLocation()
             print("Resumed high-accuracy updates.")
@@ -367,6 +367,7 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         lastUpdateTime = now
 
         if(self.appInBackground){
+          print("App is in background")
             let payload = LocationPayload(
                 lat: location.coordinate.latitude,
                 lng: location.coordinate.longitude,
@@ -378,6 +379,7 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
             )
           self.sendUpdatesToServer(locationPayload: payload)
         } else {
+          print("App is in foreground")
             notifyListeners("locationUpdate", data: [
                 "lat": location.coordinate.latitude,
                 "lng": location.coordinate.longitude,
@@ -523,7 +525,7 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
                     empId: "\(user.userId)",
                     lat: String(format: "%.5f", locationPayload.lat),
                     lng: String(format: "%.5f", locationPayload.lng),
-                    description: "Employee just entered the geofence \(geo.clockDescription)",
+                    message: "Employee just entered the geofence \(geo.clockDescription)",
                     timestamp: Int(Date().timeIntervalSince1970 * 1000)
                 )
                 sendLog(token: user.token ?? "", url: logsEndpoint, payload: logPayload)
@@ -552,7 +554,7 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
                 empId: "\(user.userId)",
                 lat: String(format: "%.5f", locationPayload.lat),
                 lng: String(format: "%.5f", locationPayload.lng),
-                description: "Employee is \(distanceToClock) closer to \(closest.geofence.clockDescription)",
+                message: "Employee is \(distanceToClock) closer to \(closest.geofence.clockDescription)",
                 timestamp: Int(Date().timeIntervalSince1970 * 1000)
             )
             sendLog(token: user.token ?? "", url: logsEndpoint, payload: logPayload)
@@ -578,13 +580,12 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
 
         do {
             let jsonData = try JSONEncoder().encode(payload)
-
             var request = URLRequest(url: endpoint)
             request.httpMethod = "POST"
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = jsonData
-
+ 
             let task = URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
                     print("sendLog: Request failed - \(error.localizedDescription)")
