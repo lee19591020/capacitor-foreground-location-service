@@ -119,6 +119,11 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void removeClockingHistory(PluginCall call){
+
+    }
+
+    @PluginMethod
     public void setApiOptions(PluginCall call) {
         try {
             // Get the root object
@@ -252,6 +257,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         Context context = getContext();
         Intent serviceIntent = new Intent(context, CapacitorForegroundLocationService.class);
         context.stopService(serviceIntent);
+        clearClockHistory();
         call.resolve();
     }
 
@@ -823,6 +829,15 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         } catch (JSONException e) {
             Log.e("ClockHistory", "Error saving clock history: " + e.getMessage());
         }
+    }
+    // wipe the clock history
+    private void clearClockHistory() {
+        SharedPreferences prefs = getContext()
+            .getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+        prefs.edit()
+            .remove("clockHistory")
+            .apply();
+        Log.i("ClockHistory", "Cleared clock history");
     }
 
 } // end of plugin

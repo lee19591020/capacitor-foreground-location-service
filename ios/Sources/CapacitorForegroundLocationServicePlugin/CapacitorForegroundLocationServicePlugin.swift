@@ -349,7 +349,7 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
             UIApplication.shared.endBackgroundTask(backgroundTask)
             backgroundTask = .invalid
         }
-
+        self.clearClockHistory()
         call.resolve(["status": "stopped"])
     }
 
@@ -882,6 +882,12 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
             print("ClockHistory: Failed to serialize history")
         }
     }
+    private func clearClockHistory() {
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: "clockHistory")
+        print("ClockHistory: cleared clock history")
+    }
+
     private func formatDate(_ timeStamp: Int) -> String {
         let date = Date(timeIntervalSince1970: TimeInterval(timeStamp) / 1000)
         let formatter = DateFormatter()
