@@ -779,37 +779,51 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
     }
   }
 
-  private void saveClockHistory(int clockNumber, String type, long timeStamp) {
-    SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
-    String logsJson = prefs.getString("clockHistory", "{}");
-    try {
-      JSONObject history = new JSONObject(logsJson);
-      String dateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date(timeStamp));
-      JSONObject dayEntry = history.optJSONObject(dateKey);
-      if (dayEntry == null) {
-        dayEntry = new JSONObject();
-        history.put(dateKey, dayEntry);
-      }
+    private void saveClockHistory(int clockNumber, String type, long timeStamp) {
+        SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+        String logsJson = prefs.getString("clockHistory", "{}");
 
-      String clockKey = String.valueOf(clockNumber); // convert int to string
-      JSONObject geofenceEntry = dayEntry.optJSONObject(clockKey);
-      if (geofenceEntry == null) {
-        geofenceEntry = new JSONObject();
-        dayEntry.put(clockKey, geofenceEntry);
-      }
+        try {
+            // Parse existing history
+            JSONObject history = new JSONObject(logsJson);
 
-      if (type.equals("in")) {
-        geofenceEntry.put("in", true);
-      }
-      if(type.equals("out")) {
-        geofenceEntry.put("out", true);
-      }
-      Log.i("ClockHistory", "Saved clock history: " + history.toString());
-      prefs.edit().putString("clockHistory", history.toString()).apply();
-    } catch (JSONException e) {
-      Log.e("ClockHistory", "Error saving clock history: " + e.getMessage());
+            // Format today's date key
+            String dateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date(timeStamp));
+
+            // Create or get today's entry
+            JSONObject dayEntry = history.optJSONObject(dateKey);
+            if (dayEntry == null) {
+                dayEntry = new JSONObject();
+            }
+
+            // Create or update geofence entry
+            String clockKey = String.valueOf(clockNumber);
+            JSONObject geofenceEntry = dayEntry.optJSONObject(clockKey);
+            if (geofenceEntry == null) {
+                geofenceEntry = new JSONObject();
+            }
+
+            if (type.equals("in")) {
+                geofenceEntry.put("in", true);
+            }
+            if (type.equals("out")) {
+                geofenceEntry.put("out", true);
+            }
+
+            dayEntry.put(clockKey, geofenceEntry);
+
+            // Create new history with only today's date
+            JSONObject newHistory = new JSONObject();
+            newHistory.put(dateKey, dayEntry);
+
+            // Save the new history
+            prefs.edit().putString("clockHistory", newHistory.toString()).apply();
+            Log.i("ClockHistory", "Saved clock history: " + newHistory.toString());
+
+        } catch (JSONException e) {
+            Log.e("ClockHistory", "Error saving clock history: " + e.getMessage());
+        }
     }
-  }
 
 } // end of plugin
 
