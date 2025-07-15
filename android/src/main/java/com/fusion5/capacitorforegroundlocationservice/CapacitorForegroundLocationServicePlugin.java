@@ -117,12 +117,6 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             call.reject("Error in getApiOptions: " + e.getMessage());
         }
     }
-
-    @PluginMethod
-    public void removeClockingHistory(PluginCall call){
-
-    }
-
     @PluginMethod
     public void setApiOptions(PluginCall call) {
         try {
@@ -259,6 +253,26 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         context.stopService(serviceIntent);
         clearClockHistory();
         call.resolve();
+    }
+
+    @PluginMethod
+    public void setClockInHistory(PluginCall call) {
+        if (!call.hasOption("clockNumber") || 
+            !call.hasOption("clockingType") || 
+            !call.hasOption("timestamp")) {
+            call.reject("Missing required parameters");
+            return;
+        }
+
+        int clockNumber = call.getInt("clockNumber");
+        String type = call.getString("clockingType");
+        long timestamp = call.getLong("timestamp");
+
+        saveClockHistory(clockNumber, type, timestamp);
+
+        JSObject result = new JSObject();
+        result.put("status", "saved");
+        call.resolve(result);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -785,7 +799,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
     }
   }
 
-    private void saveClockHistory(int clockNumber, String type, long timeStamp) {
+    public void saveClockHistory(int clockNumber, String type, long timeStamp) {
         SharedPreferences prefs = getContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
         String logsJson = prefs.getString("clockHistory", "{}");
 

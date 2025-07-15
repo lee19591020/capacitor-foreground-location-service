@@ -19,6 +19,7 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         CAPPluginMethod(name: "startUpdatingLocation", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopUpdatingLocation", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "appIsInBackground", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setClockInHistory", returnType: CAPPluginReturnPromise)
     ]
 
     private var locationManager: CLLocationManager?
@@ -351,6 +352,20 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         }
         self.clearClockHistory()
         call.resolve(["status": "stopped"])
+    }
+
+    @objc func setClockInHistory(_ call: CAPPluginCall) {
+        guard
+            let clockNumber = call.getInt("clockNumber"),
+            let type = call.getString("clockingType"),
+            let timestamp = call.getDouble("timestamp")
+        else {
+            call.reject("Error setting clock history")
+            return
+        }
+
+      self.saveClockHistory(clockNumber: clockNumber, type: type, timeStamp: timestamp)
+        call.resolve(["status": "history clocking save"])
     }
 
     // MARK: - CLLocationManagerDelegate
@@ -846,7 +861,6 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         formatter.dateFormat = "yyyy-MM-dd"
         let dateKey = formatter.string(from: date)
 
-        // Load existing clock history
         var newHistory: [String: Any] = [:]
         var dayEntry: [String: Any] = [:]
 
@@ -857,24 +871,21 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
             dayEntry = existingDayEntry
         }
 
-        // Update or create geofence entry
         let clockKey = String(clockNumber)
         var geofenceEntry: [String: Any] = dayEntry[clockKey] as? [String: Any] ?? [:]
 
-        if type == "in" {
+        // Prevent redundant writes
+        if type == "in" && (geofenceEntry["in"] as? Bool ?? false) == false {
             geofenceEntry["in"] = true
         }
-        if type == "out" {
+
+        if type == "out" && (geofenceEntry["out"] as? Bool ?? false) == false {
             geofenceEntry["out"] = true
         }
 
-        // Put updated geofence entry into day entry
         dayEntry[clockKey] = geofenceEntry
-
-        // Only keep today’s entry
         newHistory[dateKey] = dayEntry
 
-        // Save back to UserDefaults
         if let jsonData = try? JSONSerialization.data(withJSONObject: newHistory, options: []),
         let jsonString = String(data: jsonData, encoding: .utf8) {
             prefs.set(jsonString, forKey: "clockHistory")
