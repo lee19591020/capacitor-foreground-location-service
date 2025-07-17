@@ -19,11 +19,12 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         CAPPluginMethod(name: "startUpdatingLocation", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopUpdatingLocation", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "appIsInBackground", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setClockInHistory", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setClockHistory", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "hasClockedIn", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "hasClockedOut", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveAutoClockData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getAutoClockData", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "eraseAutoClockingData", returnType: CAPPluginReturnPromise)
     ]
 
     private var locationManager: CLLocationManager?
@@ -359,7 +360,7 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         call.resolve(["status": "stopped"])
     }
 
-    @objc func setClockInHistory(_ call: CAPPluginCall) {
+    @objc func setClockHistory(_ call: CAPPluginCall) {
         guard
             let clockNumber = call.getInt("clockNumber"),
             let type = call.getString("clockingType"),
@@ -504,6 +505,11 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
     @objc func getAutoClockData(_ call: CAPPluginCall) {
         let logsArray = UserDefaults.standard.array(forKey: "failedLogs") as? [[String: Any]] ?? []
         call.resolve(["logs": logsArray])
+    }
+
+    @objc func eraseAutoClockingData(_ call: CAPPluginCall) {
+        self.removeAutoClockingData();
+        call.resolve(["status": "Data removed"]);
     }
 
     // MARK: - Local Notifications
@@ -769,6 +775,11 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         var logsArray = UserDefaults.standard.array(forKey: "failedLogs") as? [[String: Any]] ?? []
         logsArray.append(logData)
         UserDefaults.standard.set(logsArray, forKey: "failedLogs")
+    }
+
+    private func removeAutoClockingData(){
+        UserDefaults.standard.removeObject(forKey: "failedLogs")
+        print("All logs sent successfully. Clearing failedLogs.")
     }
     private func logFailedPostRequest(url: String, payload: AutoClockingPayload, errorMessage: String) {
         let clockType = payload.clockType()

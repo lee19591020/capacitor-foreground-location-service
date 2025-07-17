@@ -32,6 +32,7 @@ npx cap sync
 * [`hasClockedOut(...)`](#hasclockedout)
 * [`saveAutoClockData(...)`](#saveautoclockdata)
 * [`getAutoClockData()`](#getautoclockdata)
+* [`eraseAutoClockingData()`](#eraseautoclockingdata)
 * [Interfaces](#interfaces)
 * [Type Aliases](#type-aliases)
 
@@ -268,6 +269,17 @@ getAutoClockData() => Promise<GetClockingDataResponse>
 ```
 
 **Returns:** <code>Promise&lt;<a href="#getclockingdataresponse">GetClockingDataResponse</a>&gt;</code>
+
+--------------------
+
+
+### eraseAutoClockingData()
+
+```typescript
+eraseAutoClockingData() => Promise<ClockingDataResponse>
+```
+
+**Returns:** <code>Promise&lt;<a href="#clockingdataresponse">ClockingDataResponse</a>&gt;</code>
 
 --------------------
 

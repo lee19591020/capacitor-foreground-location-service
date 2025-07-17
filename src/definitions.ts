@@ -141,4 +141,5 @@ export interface CapacitorForegroundLocationServicePlugin {
   hasClockedOut(payload: FSClockParam): Promise<ClockHistory>;
   saveAutoClockData(clockData: ClockingDataParameter): Promise<ClockingDataResponse>;
   getAutoClockData(): Promise<GetClockingDataResponse>;
+  eraseAutoClockingData(): Promise<ClockingDataResponse>;
 }
