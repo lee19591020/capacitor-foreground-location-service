@@ -609,6 +609,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
       Log.e("LogError", "Exception while logging failed request: " + e.getMessage());
     }
   }
+  
 
   private void retrySendingAutoClocking(String token) {
         OkHttpClient client = new OkHttpClient();

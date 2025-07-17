@@ -19,7 +19,11 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         CAPPluginMethod(name: "startUpdatingLocation", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopUpdatingLocation", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "appIsInBackground", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setClockInHistory", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "setClockInHistory", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "hasClockedIn", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "hasClockedOut", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "saveAutoClockData", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getAutoClockData", returnType: CAPPluginReturnPromise),
     ]
 
     private var locationManager: CLLocationManager?
@@ -93,7 +97,39 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
             formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
             return formatter.string(from: date)
         }
-    }  
+    } 
+
+    struct Endpoint: Codable {
+        let endPoint: String
+    }
+
+    struct Geofence: Codable {
+        let clockDescription: String
+        let clockNumber: Int
+        let lat: Double
+        let lng: Double
+        let locationCode: String
+        let locationDescription: String
+        let radius: Int
+    }
+
+    struct GeofenceData: Codable {
+        let geofenceData: [Geofence]
+    }
+
+    struct UserData: Codable {
+        let _token: String
+        let userId: Int
+        let username: String
+    }
+
+    struct LogsEndpoint: Codable {
+        let logsEndpoint: String
+    }
+
+    struct NotificationEnabled: Codable {
+        let allowNotification: Bool
+    }    
 
     private var config = LocationConfig()
     private var isHighFrequencyRunning = false
@@ -156,91 +192,60 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         applyConfigFrom(call)
         call.resolve(["message": "Configuration initialized"])
     }
-  struct Endpoint: Codable {
-      let endPoint: String
-  }
+    @objc public func setApiOptions(_ call: CAPPluginCall) {
+        // 1) Pull raw JS objects out of the call
+        guard
+            let endpointObj           = call.getObject("endpoint"),
+            let geofenceDataObj       = call.getObject("geofenceData"),
+            let userDataObj           = call.getObject("userData"),
+            let logsEndpointObj       = call.getObject("logsEndpoint"),
+            let allowNotificationObj  = call.getObject("allowNotification")
+        else {
+            call.reject("If passing apiOptions, all fields (endpoint, geofenceData, userData, logsEndpoint, allowNotification) must be provided.")
+            return
+        }
 
-  struct Geofence: Codable {
-      let clockDescription: String
-      let clockNumber: Int
-      let lat: Double
-      let lng: Double
-      let locationCode: String
-      let locationDescription: String
-      let radius: Int
-  }
+        do {
+            let decoder = JSONDecoder()
 
-  struct GeofenceData: Codable {
-      let geofenceData: [Geofence]
-  }
+            // 2) Turn each dictionary back into Data so we can decode into our structs
+            let endpointData          = try JSONSerialization.data(withJSONObject: endpointObj)
 
-  struct UserData: Codable {
-      let _token: String
-      let userId: Int
-      let username: String
-  }
+            let logsEndpointData      = try JSONSerialization.data(withJSONObject: logsEndpointObj)
+            let allowNotificationData = try JSONSerialization.data(withJSONObject: allowNotificationObj)
 
-  struct LogsEndpoint: Codable {
-      let logsEndpoint: String
-  }
+            // 3) Decode to validate shape
+            let endpoint       = try decoder.decode(Endpoint.self, from: endpointData)
+            let logsEndpoint   = try decoder.decode(LogsEndpoint.self, from: logsEndpointData)
+            let notification   = try decoder.decode(NotificationEnabled.self, from: allowNotificationData)
+            
+            let geoJSONData = try JSONSerialization.data(withJSONObject: geofenceDataObj)
+                guard let geoJSONString = String(data: geoJSONData, encoding: .utf8) else {
+                    call.reject("Failed to convert geofenceData to JSON string")
+                    return
+                }
+            let userJSONData = try JSONSerialization.data(withJSONObject: userDataObj)
+                guard let userJSONString = String(data: userJSONData, encoding: .utf8) else {
+                    call.reject("Failed to convert geofenceData to JSON string")
+                    return
+                }
 
-  struct NotificationEnabled: Codable {
-      let allowNotification: Bool
-  }
-  @objc public func setApiOptions(_ call: CAPPluginCall) {
-      // 1) Pull raw JS objects out of the call
-      guard
-          let endpointObj           = call.getObject("endpoint"),
-          let geofenceDataObj       = call.getObject("geofenceData"),
-          let userDataObj           = call.getObject("userData"),
-          let logsEndpointObj       = call.getObject("logsEndpoint"),
-          let allowNotificationObj  = call.getObject("allowNotification")
-      else {
-          call.reject("If passing apiOptions, all fields (endpoint, geofenceData, userData, logsEndpoint, allowNotification) must be provided.")
-          return
-      }
+            // 4) Persist into UserDefaults
+            let prefs = UserDefaults.standard
+            prefs.set(endpoint.endPoint,          forKey: "endpoint")
+            prefs.set(geoJSONString,      forKey: "geofenceData")
+            prefs.set(userJSONString,          forKey: "userData")
+            prefs.set(logsEndpoint.logsEndpoint,      forKey: "logsEndpoint")
+            prefs.set(notification.allowNotification, forKey: "allowNotification")
 
-      do {
-          let decoder = JSONDecoder()
+            call.resolve([
+                "result": "saved successfully"
+            ])
 
-          // 2) Turn each dictionary back into Data so we can decode into our structs
-          let endpointData          = try JSONSerialization.data(withJSONObject: endpointObj)
-
-          let logsEndpointData      = try JSONSerialization.data(withJSONObject: logsEndpointObj)
-          let allowNotificationData = try JSONSerialization.data(withJSONObject: allowNotificationObj)
-
-          // 3) Decode to validate shape
-          let endpoint       = try decoder.decode(Endpoint.self, from: endpointData)
-          let logsEndpoint   = try decoder.decode(LogsEndpoint.self, from: logsEndpointData)
-          let notification   = try decoder.decode(NotificationEnabled.self, from: allowNotificationData)
-        
-          let geoJSONData = try JSONSerialization.data(withJSONObject: geofenceDataObj)
-            guard let geoJSONString = String(data: geoJSONData, encoding: .utf8) else {
-                call.reject("Failed to convert geofenceData to JSON string")
-                return
-            }
-          let userJSONData = try JSONSerialization.data(withJSONObject: userDataObj)
-            guard let userJSONString = String(data: userJSONData, encoding: .utf8) else {
-                call.reject("Failed to convert geofenceData to JSON string")
-                return
-            }
-
-          // 4) Persist into UserDefaults
-          let prefs = UserDefaults.standard
-          prefs.set(endpoint.endPoint,          forKey: "endpoint")
-          prefs.set(geoJSONString,      forKey: "geofenceData")
-          prefs.set(userJSONString,          forKey: "userData")
-          prefs.set(logsEndpoint.logsEndpoint,      forKey: "logsEndpoint")
-          prefs.set(notification.allowNotification, forKey: "allowNotification")
-
-          call.resolve([
-              "result": "saved successfully"
-          ])
-
-      } catch {
-          call.reject("Error in setApiOptions: \(error.localizedDescription)")
-      }
-  }
+        } catch {
+            call.reject("Error in setApiOptions: \(error.localizedDescription)")
+        }
+    }
 
     @objc func updateConfig(_ call: CAPPluginCall) {
         applyConfigFrom(call)
@@ -442,6 +447,64 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
             call.resolve(["isBackground": isBackground])
         }
     }
+    @objc func hasClockedIn(_ call: CAPPluginCall) {
+        guard
+            let clockNumber = call.getInt("clockNumber"),
+            let timeStamp = call.getInt("timeStamp")
+        else {
+            call.reject("Invalid parameters")
+            return
+        }
+
+        let result = self.hasClockedIn(clockNumber: clockNumber, timeStamp: timeStamp)
+        call.resolve(["result": result])
+    }
+
+    @objc func hasClockedOut(_ call: CAPPluginCall) {
+        guard
+            let clockNumber = call.getInt("clockNumber"),
+            let timeStamp = call.getInt("timeStamp")
+        else {
+            call.reject("Invalid parameters")
+            return
+        }
+
+        let result = self.hasClockedOut(clockNumber: clockNumber, timeStamp: timeStamp)
+        call.resolve(["result": result])
+    }
+    @objc func saveAutoClockData(_ call: CAPPluginCall) {
+        guard
+            let token       = call.getString("token"),
+            let url         = call.getString("url"),
+            let payloadDict = call.getObject("payload"),
+            let errorMessage = call.getString("errorMessage")
+        else {
+            call.reject("Missing one or more parameters")
+            return
+        }
+
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: payloadDict, options: [])
+            let payload = try JSONDecoder().decode(AutoClockingPayload.self, from: jsonData)
+
+            // now just one call, since it's not an array any more
+            self.keepAutoClockData(
+                token: token,
+                url: url,
+                payload: payload,
+                errorMessage: errorMessage
+            )
+
+            call.resolve(["status": "saved"])
+        } catch {
+            print("saveAutoClockData: Failed to decode payload - \(error.localizedDescription)")
+            call.reject("Invalid payload format")
+        }
+    }
+    @objc func getAutoClockData(_ call: CAPPluginCall) {
+        let logsArray = UserDefaults.standard.array(forKey: "failedLogs") as? [[String: Any]] ?? []
+        call.resolve(["logs": logsArray])
+    }
 
     // MARK: - Local Notifications
     private func showLocalNotification(title: String, message: String) {
@@ -464,56 +527,56 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         }
     }
 
-  private func sendUpdatesToServer(locationPayload: LocationPayload) {
-        let prefs = UserDefaults.standard
+    private func sendUpdatesToServer(locationPayload: LocationPayload) {
+            let prefs = UserDefaults.standard
 
-        guard
-          let endpointStr      = prefs.string(forKey: "endpoint"),        // lowercase “endpoint”
-          let geofenceDataStr  = prefs.string(forKey: "geofenceData"),
-          let userDataStr      = prefs.string(forKey: "userData"),
-          let logsEndpointStr  = prefs.string(forKey: "logsEndpoint")
-        else {
-          print("Missing stored values.")
-          return
-        }
-
-        do {
             guard
-                let geofenceDataJSON = try JSONSerialization.jsonObject(with: Data(geofenceDataStr.utf8)) as? [String: Any],
-                let geofenceArray = geofenceDataJSON["geofenceData"] as? [[String: Any]],
-                let userJSON = try JSONSerialization.jsonObject(with: Data(userDataStr.utf8)) as? [String: Any]
+            let endpointStr      = prefs.string(forKey: "endpoint"),        // lowercase “endpoint”
+            let geofenceDataStr  = prefs.string(forKey: "geofenceData"),
+            let userDataStr      = prefs.string(forKey: "userData"),
+            let logsEndpointStr  = prefs.string(forKey: "logsEndpoint")
             else {
-                print("Failed to parse stored JSON")
-                return
+            print("Missing stored values.")
+            return
             }
 
-            var geofenceList: [GeofenceInformation] = []
+            do {
+                guard
+                    let geofenceDataJSON = try JSONSerialization.jsonObject(with: Data(geofenceDataStr.utf8)) as? [String: Any],
+                    let geofenceArray = geofenceDataJSON["geofenceData"] as? [[String: Any]],
+                    let userJSON = try JSONSerialization.jsonObject(with: Data(userDataStr.utf8)) as? [String: Any]
+                else {
+                    print("Failed to parse stored JSON")
+                    return
+                }
 
-            for obj in geofenceArray {
-                let geo = GeofenceInformation(
-                    lat: obj["lat"] as? Double ?? 0.0,
-                    lng: obj["lng"] as? Double ?? 0.0,
-                    radius: obj["radius"] as? Double ?? 0.0,
-                    clockDescription: obj["clockDescription"] as? String ?? "",
-                    clockNumber: obj["clockNumber"] as? Int ?? 0,
-                    locationCode: obj["locationCode"] as? String ?? "",
-                    locationDescription: obj["locationDescription"] as? String ?? ""
+                var geofenceList: [GeofenceInformation] = []
+
+                for obj in geofenceArray {
+                    let geo = GeofenceInformation(
+                        lat: obj["lat"] as? Double ?? 0.0,
+                        lng: obj["lng"] as? Double ?? 0.0,
+                        radius: obj["radius"] as? Double ?? 0.0,
+                        clockDescription: obj["clockDescription"] as? String ?? "",
+                        clockNumber: obj["clockNumber"] as? Int ?? 0,
+                        locationCode: obj["locationCode"] as? String ?? "",
+                        locationDescription: obj["locationDescription"] as? String ?? ""
+                    )
+                    geofenceList.append(geo)
+                }
+
+                let user = User(
+                    userId: userJSON["userId"] as? Int ?? 0,
+                    username: userJSON["username"] as? String,
+                    token: userJSON["_token"] as? String
                 )
-                geofenceList.append(geo)
+
+            self.calculateAndSend(geofenceList: geofenceList, user: user, logsEndpoint: logsEndpointStr, locationPayload: locationPayload, endPoint: endpointStr)
+
+            } catch {
+                print("Error parsing stored values or building objects: \(error.localizedDescription)")
             }
-
-            let user = User(
-                userId: userJSON["userId"] as? Int ?? 0,
-                username: userJSON["username"] as? String,
-                token: userJSON["_token"] as? String
-            )
-
-          self.calculateAndSend(geofenceList: geofenceList, user: user, logsEndpoint: logsEndpointStr, locationPayload: locationPayload, endPoint: endpointStr)
-
-        } catch {
-            print("Error parsing stored values or building objects: \(error.localizedDescription)")
         }
-    }
 
     private func calculateAndSend(
         geofenceList: [GeofenceInformation],
@@ -628,8 +691,6 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         let clockNumber = payload.geofence.clockNumber
         let timestamp = payload.timeStamp
 
-        print("Has clockin: \(hasClockedIn(clockNumber: clockNumber, timeStamp: timestamp))")
-        print("Has clockout: \(hasClockedOut(clockNumber: clockNumber, timeStamp: timestamp))")
 
         if hasClockedIn(clockNumber: clockNumber, timeStamp: timestamp) &&
             hasClockedOut(clockNumber: clockNumber, timeStamp: timestamp) {
@@ -652,11 +713,8 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
             request.httpBody = jsonData
             request.timeoutInterval = 5 // seconds
 
-            print("Requesting Clocking \(payload.isClockIn ? "IN" : "OUT")")
-
             let task = URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("Clocking \(payload.isClockIn ? "IN" : "OUT") failed - saving offline: \(error.localizedDescription)")
                     self.logFailedPostRequest(url: url, payload: payload, errorMessage: "Something went wrong: \(error.localizedDescription)")
                     return
                 }
@@ -691,6 +749,26 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
         } catch {
             print("JSON encoding error: \(error.localizedDescription)")
         }
+    }
+    private func keepAutoClockData(token: String, url: String, payload: AutoClockingPayload, errorMessage: String) {
+        var logData: [String: Any] = [
+            "failedEndpoint": url,
+            "error": errorMessage
+        ]
+        
+        do {
+            let payloadJSON = try JSONEncoder().encode(payload)
+            if let json = try JSONSerialization.jsonObject(with: payloadJSON) as? [String: Any] {
+                logData["payload"] = json
+            }
+        } catch {
+            print("Error encoding payload for log: \(error.localizedDescription)")
+            return
+        }
+        
+        var logsArray = UserDefaults.standard.array(forKey: "failedLogs") as? [[String: Any]] ?? []
+        logsArray.append(logData)
+        UserDefaults.standard.set(logsArray, forKey: "failedLogs")
     }
     private func logFailedPostRequest(url: String, payload: AutoClockingPayload, errorMessage: String) {
         let clockType = payload.clockType()

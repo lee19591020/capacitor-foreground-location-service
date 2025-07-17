@@ -22,15 +22,18 @@ npx cap sync
 * [`isLocationServiceRunning()`](#islocationservicerunning)
 * [`getStoredValue()`](#getstoredvalue)
 * [`getApiOptions()`](#getapioptions)
-* [`setClockInHistory(...)`](#setclockinhistory)
 * [`initialize(...)`](#initialize)
 * [`startUpdatingLocation()`](#startupdatinglocation)
 * [`stopUpdatingLocation()`](#stopupdatinglocation)
 * [`appIsInBackground()`](#appisinbackground)
 * [`showLocalNotification(...)`](#showlocalnotification)
+* [`setClockHistory(...)`](#setclockhistory)
+* [`hasClockedIn(...)`](#hasclockedin)
+* [`hasClockedOut(...)`](#hasclockedout)
+* [`saveAutoClockData(...)`](#saveautoclockdata)
+* [`getAutoClockData()`](#getautoclockdata)
 * [Interfaces](#interfaces)
 * [Type Aliases](#type-aliases)
-* [Enums](#enums)
 
 </docgen-index>
 
@@ -143,21 +146,6 @@ getApiOptions() => Promise<ForegroundLocationConfiguration>
 --------------------
 
 
-### setClockInHistory(...)
-
-```typescript
-setClockInHistory(clockHistory: SetClockHistoryPayload) => Promise<SetClockHistoryResponse>
-```
-
-| Param              | Type                                                                      |
-| ------------------ | ------------------------------------------------------------------------- |
-| **`clockHistory`** | <code><a href="#setclockhistorypayload">SetClockHistoryPayload</a></code> |
-
-**Returns:** <code>Promise&lt;<a href="#setclockhistoryresponse">SetClockHistoryResponse</a>&gt;</code>
-
---------------------
-
-
 ### initialize(...)
 
 ```typescript
@@ -209,6 +197,77 @@ showLocalNotification(options: NotificationOptionsiOs) => Promise<void>
 | Param         | Type                                                                      |
 | ------------- | ------------------------------------------------------------------------- |
 | **`options`** | <code><a href="#notificationoptionsios">NotificationOptionsiOs</a></code> |
+
+--------------------
+
+
+### setClockHistory(...)
+
+```typescript
+setClockHistory(clockHistory: SetClockHistoryPayload) => Promise<SetClockHistoryResponse>
+```
+
+| Param              | Type                                                                      |
+| ------------------ | ------------------------------------------------------------------------- |
+| **`clockHistory`** | <code><a href="#setclockhistorypayload">SetClockHistoryPayload</a></code> |
+
+**Returns:** <code>Promise&lt;<a href="#setclockhistoryresponse">SetClockHistoryResponse</a>&gt;</code>
+
+--------------------
+
+
+### hasClockedIn(...)
+
+```typescript
+hasClockedIn(payload: FSClockParam) => Promise<ClockHistory>
+```
+
+| Param         | Type                                                  |
+| ------------- | ----------------------------------------------------- |
+| **`payload`** | <code><a href="#fsclockparam">FSClockParam</a></code> |
+
+**Returns:** <code>Promise&lt;<a href="#clockhistory">ClockHistory</a>&gt;</code>
+
+--------------------
+
+
+### hasClockedOut(...)
+
+```typescript
+hasClockedOut(payload: FSClockParam) => Promise<ClockHistory>
+```
+
+| Param         | Type                                                  |
+| ------------- | ----------------------------------------------------- |
+| **`payload`** | <code><a href="#fsclockparam">FSClockParam</a></code> |
+
+**Returns:** <code>Promise&lt;<a href="#clockhistory">ClockHistory</a>&gt;</code>
+
+--------------------
+
+
+### saveAutoClockData(...)
+
+```typescript
+saveAutoClockData(clockData: ClockingDataParameter) => Promise<ClockingDataResponse>
+```
+
+| Param           | Type                                                                    |
+| --------------- | ----------------------------------------------------------------------- |
+| **`clockData`** | <code><a href="#clockingdataparameter">ClockingDataParameter</a></code> |
+
+**Returns:** <code>Promise&lt;<a href="#clockingdataresponse">ClockingDataResponse</a>&gt;</code>
+
+--------------------
+
+
+### getAutoClockData()
+
+```typescript
+getAutoClockData() => Promise<GetClockingDataResponse>
+```
+
+**Returns:** <code>Promise&lt;<a href="#getclockingdataresponse">GetClockingDataResponse</a>&gt;</code>
 
 --------------------
 
@@ -286,14 +345,14 @@ showLocalNotification(options: NotificationOptionsiOs) => Promise<void>
 
 #### ForegroundLocationConfiguration
 
-| Prop                         | Type                                                                      |
-| ---------------------------- | ------------------------------------------------------------------------- |
-| **`interval`**               | <code>number</code>                                                       |
-| **`distanceFilter`**         | <code>number</code>                                                       |
-| **`notificationTitle`**      | <code>string</code>                                                       |
-| **`notificationMessage`**    | <code>string</code>                                                       |
-| **`notificationImportance`** | <code><a href="#notificationimportance">NotificationImportance</a></code> |
-| **`notificationChannelId`**  | <code>number</code>                                                       |
+| Prop                         | Type                |
+| ---------------------------- | ------------------- |
+| **`interval`**               | <code>number</code> |
+| **`distanceFilter`**         | <code>number</code> |
+| **`notificationTitle`**      | <code>string</code> |
+| **`notificationMessage`**    | <code>string</code> |
+| **`notificationImportance`** | <code>number</code> |
+| **`notificationChannelId`**  | <code>number</code> |
 
 
 #### PermissionResponse
@@ -330,22 +389,6 @@ showLocalNotification(options: NotificationOptionsiOs) => Promise<void>
 | **`running`** | <code>boolean</code> |
 
 
-#### SetClockHistoryResponse
-
-| Prop         | Type                |
-| ------------ | ------------------- |
-| **`status`** | <code>string</code> |
-
-
-#### SetClockHistoryPayload
-
-| Prop               | Type                       |
-| ------------------ | -------------------------- |
-| **`clockNumber`**  | <code>number</code>        |
-| **`clockingType`** | <code>'in' \| 'out'</code> |
-| **`timestamp`**    | <code>number</code>        |
-
-
 #### ForegroundLocationConfigurationIOS
 
 | Prop                 | Type                                                              |
@@ -371,25 +414,91 @@ showLocalNotification(options: NotificationOptionsiOs) => Promise<void>
 | **`body`**  | <code>string</code> |
 
 
+#### SetClockHistoryResponse
+
+| Prop         | Type                |
+| ------------ | ------------------- |
+| **`status`** | <code>string</code> |
+
+
+#### SetClockHistoryPayload
+
+| Prop               | Type                       |
+| ------------------ | -------------------------- |
+| **`clockNumber`**  | <code>number</code>        |
+| **`clockingType`** | <code>'in' \| 'out'</code> |
+| **`timestamp`**    | <code>number</code>        |
+
+
+#### ClockHistory
+
+| Prop         | Type                 |
+| ------------ | -------------------- |
+| **`result`** | <code>boolean</code> |
+
+
+#### FSClockParam
+
+| Prop              | Type                |
+| ----------------- | ------------------- |
+| **`clockNumber`** | <code>number</code> |
+| **`timeStamp`**   | <code>number</code> |
+
+
+#### ClockingDataResponse
+
+| Prop         | Type                |
+| ------------ | ------------------- |
+| **`status`** | <code>string</code> |
+
+
+#### ClockingDataParameter
+
+| Prop               | Type                                                                    |
+| ------------------ | ----------------------------------------------------------------------- |
+| **`token`**        | <code>string</code>                                                     |
+| **`url`**          | <code>string</code>                                                     |
+| **`payload`**      | <code><a href="#fsautoclockingpayload">FSAutoClockingPayload</a></code> |
+| **`errorMessage`** | <code>string</code>                                                     |
+
+
+#### FSAutoClockingPayload
+
+| Prop            | Type                                                                                    |
+| --------------- | --------------------------------------------------------------------------------------- |
+| **`empId`**     | <code>string</code>                                                                     |
+| **`lat`**       | <code>number</code>                                                                     |
+| **`lng`**       | <code>number</code>                                                                     |
+| **`isInside`**  | <code>boolean</code>                                                                    |
+| **`geofence`**  | <code><a href="#fsgeofenceinformationdistance">FSGeofenceInformationDistance</a></code> |
+| **`timeStamp`** | <code>number</code>                                                                     |
+
+
+#### FSGeofenceInformationDistance
+
+| Prop                      | Type                |
+| ------------------------- | ------------------- |
+| **`lat`**                 | <code>number</code> |
+| **`lng`**                 | <code>number</code> |
+| **`radius`**              | <code>number</code> |
+| **`clockDescription`**    | <code>string</code> |
+| **`clockNumber`**         | <code>number</code> |
+| **`locationCode`**        | <code>string</code> |
+| **`locationDescription`** | <code>string</code> |
+
+
+#### GetClockingDataResponse
+
+| Prop       | Type                                         |
+| ---------- | -------------------------------------------- |
+| **`data`** | <code>ClockingDataParameter[] \| null</code> |
+
+
 ### Type Aliases
 
 
 #### CompleteOrNothing
 
-<code>T</code> | 
-
-
-### Enums
-
-
-#### NotificationImportance
-
-| Members       | Value          |
-| ------------- | -------------- |
-| **`MIN`**     | <code>1</code> |
-| **`LWO`**     | <code>2</code> |
-| **`DEFAULT`** | <code>3</code> |
-| **`HIGH`**    | <code>4</code> |
-| **`MAX`**     | <code>5</code> |
+<code>T</code> |
 
 </docgen-api>
