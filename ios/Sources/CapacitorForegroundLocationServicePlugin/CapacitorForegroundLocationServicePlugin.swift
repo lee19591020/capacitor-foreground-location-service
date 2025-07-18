@@ -476,7 +476,7 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
     @objc func saveAutoClockData(_ call: CAPPluginCall) {
         guard
             let token       = call.getString("token"),
-            let url         = call.getString("url"),
+            let failedEndpoint  = call.getString("failedEndpoint"),
             let payloadDict = call.getObject("payload"),
             let errorMessage = call.getString("errorMessage")
         else {
@@ -491,7 +491,7 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
             // now just one call, since it's not an array any more
             self.keepAutoClockData(
                 token: token,
-                url: url,
+                url: failedEndpoint,
                 payload: payload,
                 errorMessage: errorMessage
             )
@@ -759,7 +759,7 @@ public class CapacitorForegroundLocationServicePlugin: CAPPlugin, CAPBridgedPlug
     private func keepAutoClockData(token: String, url: String, payload: AutoClockingPayload, errorMessage: String) {
         var logData: [String: Any] = [
             "failedEndpoint": url,
-            "error": errorMessage
+            "errorMessage": errorMessage
         ]
         
         do {

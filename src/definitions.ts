@@ -98,7 +98,8 @@ export interface GetClockingDataResponse {
 export interface ClockingDataParameter {
   failedEndpoint: string;
   payload: FSAutoClockingPayload;
-  error: string;
+  errorMessage: string;
+  token: string;
 }
 export interface FSAutoClockingPayload {
   empId: string;

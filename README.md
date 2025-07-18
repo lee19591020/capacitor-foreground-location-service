@@ -470,7 +470,8 @@ eraseAutoClockingData() => Promise<ClockingDataResponse>
 | -------------------- | ----------------------------------------------------------------------- |
 | **`failedEndpoint`** | <code>string</code>                                                     |
 | **`payload`**        | <code><a href="#fsautoclockingpayload">FSAutoClockingPayload</a></code> |
-| **`error`**          | <code>string</code>                                                     |
+| **`errorMessage`**   | <code>string</code>                                                     |
+| **`token`**          | <code>string</code>                                                     |
 
 
 #### FSAutoClockingPayload
