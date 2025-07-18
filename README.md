@@ -503,7 +503,7 @@ eraseAutoClockingData() => Promise<ClockingDataResponse>
 
 | Prop       | Type                                         |
 | ---------- | -------------------------------------------- |
-| **`data`** | <code>ClockingDataParameter[] \| null</code> |
+| **`logs`** | <code>ClockingDataParameter[] \| null</code> |
 
 
 ### Type Aliases

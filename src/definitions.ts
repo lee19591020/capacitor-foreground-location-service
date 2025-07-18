@@ -93,7 +93,7 @@ export interface ClockingDataResponse {
 }
 
 export interface GetClockingDataResponse {
-  data: ClockingDataParameter[] | null;
+  logs: ClockingDataParameter[] | null;
 }
 export interface ClockingDataParameter {
   token: string;
