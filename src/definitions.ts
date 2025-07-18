@@ -96,10 +96,9 @@ export interface GetClockingDataResponse {
   logs: ClockingDataParameter[] | null;
 }
 export interface ClockingDataParameter {
-  token: string;
-  url: string;
+  failedEndpoint: string;
   payload: FSAutoClockingPayload;
-  errorMessage: string;
+  error: string;
 }
 export interface FSAutoClockingPayload {
   empId: string;

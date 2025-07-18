@@ -466,12 +466,11 @@ eraseAutoClockingData() => Promise<ClockingDataResponse>
 
 #### ClockingDataParameter
 
-| Prop               | Type                                                                    |
-| ------------------ | ----------------------------------------------------------------------- |
-| **`token`**        | <code>string</code>                                                     |
-| **`url`**          | <code>string</code>                                                     |
-| **`payload`**      | <code><a href="#fsautoclockingpayload">FSAutoClockingPayload</a></code> |
-| **`errorMessage`** | <code>string</code>                                                     |
+| Prop                 | Type                                                                    |
+| -------------------- | ----------------------------------------------------------------------- |
+| **`failedEndpoint`** | <code>string</code>                                                     |
+| **`payload`**        | <code><a href="#fsautoclockingpayload">FSAutoClockingPayload</a></code> |
+| **`error`**          | <code>string</code>                                                     |
 
 
 #### FSAutoClockingPayload
