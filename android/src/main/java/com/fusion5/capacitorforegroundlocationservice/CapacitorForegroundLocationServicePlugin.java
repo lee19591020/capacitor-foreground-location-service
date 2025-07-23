@@ -300,46 +300,54 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
     }
     @PluginMethod
     public void hasClockedIn(PluginCall call){
-        // Read params
-        Integer clockNumber = call.getInt("clockNumber");
-        Integer timeStamp   = call.getInt("timeStamp");
-
-        // Validate
-        if (clockNumber == null || timeStamp == null) {
+        try {
+          int clockNumber = call.getInt("clockNumber", -1);
+          long timeStamp   = call.getLong("timeStamp", -1L);
+          Log.e(TAG,"Clock NUmber:" + clockNumber);
+          Log.e(TAG,"timeStamp:" + timeStamp);
+          // Validate
+          if (clockNumber == -1 || timeStamp == -1) {
             call.reject("Invalid parameters");
             return;
+          }
+
+          // Call your business logic
+          boolean result = this.hasClockedIn(clockNumber, timeStamp);
+
+          // Return to JS
+          JSObject ret = new JSObject();
+          ret.put("result", result);
+          call.resolve(ret);
+        } catch (Exception e) {
+          call.reject("Invalid parameters: " + e.getMessage());
         }
 
-        // Call your business logic
-        boolean result = this.hasClockedIn(clockNumber, timeStamp);
-
-        // Return to JS
-        JSObject ret = new JSObject();
-        ret.put("result", result);
-        call.resolve(ret);
     }
 
     @PluginMethod
     public void hasClockedOut(PluginCall call){
-        // Read params
-        Integer clockNumber = call.getInt("clockNumber");
-        Integer timeStamp   = call.getInt("timeStamp");
+        try {
+          int clockNumber = call.getInt("clockNumber", -1);
+          long timeStamp   = call.getLong("timeStamp", -1L);
 
-        // Validate
-        if (clockNumber == null || timeStamp == null) {
+          // Validate
+          if (clockNumber == -1 || timeStamp == -1) {
             call.reject("Invalid parameters");
             return;
+          }
+
+          // Call your business logic
+          boolean result = this.hasClockedOut(clockNumber, timeStamp);
+
+          // Return to JS
+          JSObject ret = new JSObject();
+          ret.put("result", result);
+          call.resolve(ret);
+        } catch (Exception e) {
+          call.reject("Invalid parameters: " + e.getMessage());
         }
 
-        // Call your business logic
-        boolean result = this.hasClockedOut(clockNumber, timeStamp);
-
-        // Return to JS
-        JSObject ret = new JSObject();
-        ret.put("result", result);
-        call.resolve(ret);
     }
-
     @PluginMethod
     public void saveAutoClockData(PluginCall call) {
 
