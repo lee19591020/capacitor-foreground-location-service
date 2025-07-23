@@ -278,8 +278,8 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
 
     @PluginMethod
     public void setClockInHistory(PluginCall call) {
-        if (!call.hasOption("clockNumber") || 
-            !call.hasOption("clockingType") || 
+        if (!call.hasOption("clockNumber") ||
+            !call.hasOption("clockingType") ||
             !call.hasOption("timestamp")) {
             call.reject("Missing required parameters");
             return;
@@ -348,6 +348,7 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         }
 
     }
+
     @PluginMethod
     public void saveAutoClockData(PluginCall call) {
 
@@ -365,7 +366,6 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             String payloadJson = payloadObj.toString();
 
             JSONObject json = new JSONObject(payloadJson);
-
 
             String empId       = json.getString("empId");
             String lat         = json.getString("lat");
@@ -1011,15 +1011,10 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
     }
     private void keepAutoClockData(String token, String url, AutoClockingPayload payload, String errorMessage) {
         try {
-            // 1) Build a single log entry as a JSONObject
             JSONObject logData = new JSONObject();
             logData.put("failedEndpoint", url);
             logData.put("errorMessage", errorMessage);
-
-
-            logData.put("payload", payload.toString());
-
-            // 3) Load existing logs array (if any)
+            logData.put("payload", payload.toJson());
             SharedPreferences prefs = getContext()
                     .getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
             String existingLogs = prefs.getString("failedLogs", null);
@@ -1030,8 +1025,6 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             } else {
                 logsArray = new JSONArray();
             }
-
-            // 4) Append the new entry and persist
             logsArray.put(logData);
             prefs.edit()
                     .putString("failedLogs", logsArray.toString())
