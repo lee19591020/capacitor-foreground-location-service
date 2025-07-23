@@ -35,7 +35,9 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 import okhttp3.Call;
@@ -236,6 +238,25 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
         result.put("running", isServiceRunning(getContext()));
         call.resolve(result);
     }
+
+    @PluginMethod
+    public void setClockHistory(PluginCall call){
+        Integer clockNumber   = call.getInt("clockNumber");
+        String  clockingType  = call.getString("clockingType");
+        Long    timestamp     = call.getLong("timestamp");
+
+        if (clockNumber == null || clockingType == null || timestamp == null) {
+            call.reject("Error setting clock history");
+            return;
+        }
+
+        saveClockHistory(clockNumber, clockingType, timestamp);
+
+        JSObject ret = new JSObject();
+        ret.put("status", "history clocking save");
+        call.resolve(ret);
+    }
+
     private static boolean isServiceRunning(Context context) {
         ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
@@ -263,15 +284,135 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             call.reject("Missing required parameters");
             return;
         }
+        try {
+            int clockNumber = call.getInt("clockNumber");
+            String type = call.getString("clockingType");
+            long timestamp = call.getLong("timestamp");
 
-        int clockNumber = call.getInt("clockNumber");
-        String type = call.getString("clockingType");
-        long timestamp = call.getLong("timestamp");
+            saveClockHistory(clockNumber, type, timestamp);
 
-        saveClockHistory(clockNumber, type, timestamp);
+            JSObject result = new JSObject();
+            result.put("status", "saved");
+            call.resolve(result);
+        } catch (Exception e) {
+            call.reject("Error: ", e.getMessage());
+        }
+    }
+    @PluginMethod
+    public void hasClockedIn(PluginCall call){
+        // Read params
+        Integer clockNumber = call.getInt("clockNumber");
+        Integer timeStamp   = call.getInt("timeStamp");
+
+        // Validate
+        if (clockNumber == null || timeStamp == null) {
+            call.reject("Invalid parameters");
+            return;
+        }
+
+        // Call your business logic
+        boolean result = this.hasClockedIn(clockNumber, timeStamp);
+
+        // Return to JS
+        JSObject ret = new JSObject();
+        ret.put("result", result);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void hasClockedOut(PluginCall call){
+        // Read params
+        Integer clockNumber = call.getInt("clockNumber");
+        Integer timeStamp   = call.getInt("timeStamp");
+
+        // Validate
+        if (clockNumber == null || timeStamp == null) {
+            call.reject("Invalid parameters");
+            return;
+        }
+
+        // Call your business logic
+        boolean result = this.hasClockedOut(clockNumber, timeStamp);
+
+        // Return to JS
+        JSObject ret = new JSObject();
+        ret.put("result", result);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void saveAutoClockData(PluginCall call) {
+
+        String token          = call.getString("token");
+        String failedEndpoint = call.getString("failedEndpoint");
+        JSObject payloadObj   = call.getObject("payload");
+        String errorMessage   = call.getString("errorMessage");
+
+        if (token == null || failedEndpoint == null || payloadObj == null || errorMessage == null) {
+            call.reject("Missing one or more parameters");
+            return;
+        }
+
+        try {
+            String payloadJson = payloadObj.toString();
+
+            JSONObject json = new JSONObject(payloadJson);
+
+
+            String empId       = json.getString("empId");
+            String lat         = json.getString("lat");
+            String lng         = json.getString("lng");
+            boolean isInside   = json.getBoolean("isInside");
+            long timeStamp     = json.getLong("timeStamp");
+
+            // 3) Parse the nested geofence object
+            JSONObject geoJson = json.getJSONObject("geofence");
+            GeofenceInformation geofence = GeofenceInformation.fromJson(geoJson);
+
+            AutoClockingPayload payload = new AutoClockingPayload(
+                    empId,
+                    lat,
+                    lng,
+                    isInside,
+                    geofence,
+                    timeStamp
+            );
+
+            // 5) Persist it
+            keepAutoClockData(token, failedEndpoint, payload, errorMessage);
+
+            // 6) Return success
+            JSObject result = new JSObject();
+            result.put("status", "saved");
+            call.resolve(result);
+
+        } catch (JSONException e) {
+            Log.e(TAG, "saveAutoClockData: Failed to decode payload – " + e.getMessage());
+            call.reject("Invalid payload format");
+        }
+    }
+    @PluginMethod
+    public void getAutoClockData(PluginCall call) {
+        SharedPreferences prefs = getContext()
+                .getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+        String logsJson = prefs.getString("failedLogs", "[]");
+        JSONArray logsArray;
+        try {
+            logsArray = new JSONArray(logsJson);
+        } catch (JSONException e) {
+            logsArray = new JSONArray();
+        }
 
         JSObject result = new JSObject();
-        result.put("status", "saved");
+        result.put("logs", logsArray);
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void eraseAutoClockingData(PluginCall call) {
+        removeAutoClockingData();
+        JSObject result = new JSObject();
+        result.put("status", "Data removed");
         call.resolve(result);
     }
 
@@ -602,14 +743,20 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
 
         prefs.edit().putString("failedLogs", logsArray.toString()).apply();
       }
-      else {
-        Log.i(TAG, "WALAy Clocking");
-      }
     } catch (Exception e) {
       Log.e("LogError", "Exception while logging failed request: " + e.getMessage());
     }
   }
-  
+
+
+    private void removeAutoClockingData() {
+        SharedPreferences prefs = getContext()
+                .getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+        prefs.edit()
+                .remove("failedLogs")
+                .apply();
+        Log.i(TAG, "All logs sent successfully. Clearing failedLogs.");
+    }
 
   private void retrySendingAutoClocking(String token) {
         OkHttpClient client = new OkHttpClient();
@@ -854,7 +1001,38 @@ public class CapacitorForegroundLocationServicePlugin extends Plugin {
             .apply();
         Log.i("ClockHistory", "Cleared clock history");
     }
+    private void keepAutoClockData(String token, String url, AutoClockingPayload payload, String errorMessage) {
+        try {
+            // 1) Build a single log entry as a JSONObject
+            JSONObject logData = new JSONObject();
+            logData.put("failedEndpoint", url);
+            logData.put("errorMessage", errorMessage);
 
+
+            logData.put("payload", payload.toString());
+
+            // 3) Load existing logs array (if any)
+            SharedPreferences prefs = getContext()
+                    .getSharedPreferences("auth_prefs", Context.MODE_PRIVATE);
+            String existingLogs = prefs.getString("failedLogs", null);
+
+            JSONArray logsArray;
+            if (existingLogs != null) {
+                logsArray = new JSONArray(existingLogs);
+            } else {
+                logsArray = new JSONArray();
+            }
+
+            // 4) Append the new entry and persist
+            logsArray.put(logData);
+            prefs.edit()
+                    .putString("failedLogs", logsArray.toString())
+                    .apply();
+
+        } catch (JSONException e) {
+            Log.e(TAG, "Error encoding or saving log entry", e);
+        }
+    }
 } // end of plugin
 
 class GeofenceInformation {
@@ -866,7 +1044,15 @@ class GeofenceInformation {
     private String locationCode;
     private String locationDescription;
 
-    public GeofenceInformation(double lat, double lng, double radius, String clockDescription, int clockNumber, String locationCode, String locationDescription) {
+    public GeofenceInformation(
+            double lat,
+            double lng,
+            double radius,
+            String clockDescription,
+            int clockNumber,
+            String locationCode,
+            String locationDescription
+    ) {
         this.lat = lat;
         this.lng = lng;
         this.radius = radius;
@@ -882,10 +1068,8 @@ class GeofenceInformation {
     public String getClockDescription() { return clockDescription; }
     public int getClockNumber() { return clockNumber; }
     public String getLocationCode() { return locationCode; }
+    public String getLocationDescription() { return locationDescription; }
 
-    public String getLocationDescription() {
-        return locationDescription;
-    }
     public JSONObject toJson() throws JSONException {
         JSONObject obj = new JSONObject();
         obj.put("lat", lat);
@@ -896,6 +1080,30 @@ class GeofenceInformation {
         obj.put("locationCode", locationCode);
         obj.put("locationDescription", locationDescription);
         return obj;
+    }
+
+    /**
+     * Parse a JSONObject into a GeofenceInformation instance.
+     * Now you can call GeofenceInformation.fromJson(jsonObject).
+     */
+    public static GeofenceInformation fromJson(JSONObject o) throws JSONException {
+        double lat                = o.getDouble("lat");
+        double lng                = o.getDouble("lng");
+        double radius             = o.getDouble("radius");
+        String clockDescription   = o.getString("clockDescription");
+        int clockNumber           = o.getInt("clockNumber");
+        String locationCode       = o.getString("locationCode");
+        String locationDescription= o.getString("locationDescription");
+
+        return new GeofenceInformation(
+                lat,
+                lng,
+                radius,
+                clockDescription,
+                clockNumber,
+                locationCode,
+                locationDescription
+        );
     }
 }
 
